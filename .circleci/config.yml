@@ -23,6 +23,11 @@ jobs:
           name: Wait for db
           command: dockerize -wait tcp://localhost:5432 -timeout 1m
 
+      # need to install pymssql dependency
+      - run:
+          name: pymssql dependency
+          command: sudo apt-get install freetds-dev
+
       # Download and cache dependencies
       - restore_cache:
           keys:
