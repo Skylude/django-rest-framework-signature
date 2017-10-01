@@ -1,0 +1,28 @@
+#
+# CircleCI Configuration for publishing a Python package to a GemFury repository.
+#
+# - This script will require setting the $GEMFURY_REPO_URL in CircleCI,
+#    under Project Settings -> Environment Variables.
+# - Using `pip install` with --extra-index-url below allows for package dependencies
+#   using the private repository as well.
+# - We use nose for running unit-tests below using `python setup.py nosetests`
+# - Only commits to the master branch of the repository will trigger pushing of package to repository,
+#    ideal for usage with git-flow (https://github.com/nvie/gitflow).
+# - Make sure to include the deploy_to_gemfury.sh script used below in your codebase, available here:
+#       https://gist.github.com/adamhadani/e79dcf9bf676a2f4d298
+#
+########################################################################################################
+machine:
+  python:
+    version: 3.5.2
+
+dependencies:
+  pre:
+    - sudo su - postgres -c "echo \"create user test with password 'test' CREATEDB;\" | psql"
+    - sudo apt-get update; sudo apt-get install python3-dev unixodbc unixodbc-dev unixodbc-bin tdsodbc
+
+deployment:
+  prod:
+    branch: master
+    commands:
+      - ./deploy/deploy_gem_fury.sh
