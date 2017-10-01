@@ -153,3 +153,6 @@ REST_FRAMEWORK_SIGNATURE = {
     'MULTIPART_POST_URLS': [],
     'UNSECURED_URLS': []
 }
+
+# set test runner to nose
+TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
