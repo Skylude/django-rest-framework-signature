@@ -72,5 +72,5 @@ jobs:
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
               pip install twine
-              twine upload --username "${PYPI_USERNAME}" -- password "${PYPI_PASSWORD}" dist/*.whl
+              twine upload --username "${PYPI_USERNAME}" -- password "${PYPI_PASSWORD}" dist/*
             fi
