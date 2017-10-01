@@ -23,10 +23,11 @@ jobs:
           name: Wait for db
           command: dockerize -wait tcp://localhost:5432 -timeout 1m
 
-      # need to install pymssql dependency
+      # need to install pyodbc dependency
       - run:
-          name: pymssql dependency
-          command: sudo apt-get install freetds-dev
+          name: pyodbc dependency
+          command: |
+            sudo apt-get install unixodbc unixodbc-dev
 
       # Download and cache dependencies
       - restore_cache:
