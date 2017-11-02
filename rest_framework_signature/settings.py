@@ -129,8 +129,6 @@ class AuthSettings(object):
             return token_classes
 
     def validate_settings(self):
-        print('--------------------------------------')
-        print(self.user_settings)
         for required_setting in self.required_settings:
             if required_setting not in self.user_settings.keys():
                 raise InvalidAuthSettings(self.ErrorMessages.NOT_PROVIDED.format(required_setting))
