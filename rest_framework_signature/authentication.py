@@ -28,8 +28,8 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
 
     def authenticate(self, request):
 
-        # if its a ping requrest just return
-        request_path = request.get_full_path()
+        # if it is an unsecured url then bypass auth
+        request_path = request.path
         if (request.method, request_path) in self.unsecured_urls:
             return
 
