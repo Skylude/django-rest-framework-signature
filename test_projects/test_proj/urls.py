@@ -1,6 +1,6 @@
 from django.conf.urls import include, url
 
-from test_app.views import ApiKeyHandler, UserHandler
+from test_projects.test_proj.test_app.views import ApiKeyHandler, UserHandler
 
 urlpatterns = [
     # authentication urls

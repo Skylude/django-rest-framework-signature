@@ -1,13 +1,13 @@
-import bcrypt
 import binascii
-from datetime import datetime, timedelta
+import bcrypt
+from datetime import timedelta
 import django
 import hashlib
 import os
 import unittest
 import uuid
 
-os.environ['DJANGO_SETTINGS_MODULE'] = 'test_proj.settings'
+os.environ['DJANGO_SETTINGS_MODULE'] = 'test_projects.test_proj.settings'
 django.setup()
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -19,7 +19,7 @@ from rest_framework_signature.settings import auth_settings
 from rest_framework.test import APIClient
 from rest_framework import response, status
 
-from test_app.models import *
+from test_projects.test_proj.test_app.models import *
 
 
 class AuthenticationTestsWithApiKeyWithNoPermissions(RestFrameworkSignatureTestClass):
@@ -106,7 +106,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         result = self.api_client.post(url, body, format='json')
         self.assertEqual(result.status_code, 200)
 
-    # todo: sso tests
+    # todo: sso test_projects
     #def test_post_login_sso(self):
     #    rent_plus_login_token = DataGenerator.set_up_rent_plus_login_token(api_key=self.device_token,
     #                                                                       user=self.user)
@@ -368,7 +368,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         self.assertEqual(result.data['detail'],
                          '{0} {1}'.format(ErrorMessages.PERMISSION_DENIED, ErrorMessages.MISSING_NONCE))
 
-    @unittest.mock.patch('test_app.views.UserHandler.get')
+    @unittest.mock.patch('test_projects.test_proj.test_app.views.UserHandler.get')
     def test_add_api_key_id_to_request(self, mock_get):
         mock_get.return_value = response.Response({}, status=status.HTTP_200_OK)
         url = '/users'

@@ -2,7 +2,7 @@ import django
 import os
 import unittest
 
-os.environ['DJANGO_SETTINGS_MODULE'] = 'test_proj.settings'
+os.environ['DJANGO_SETTINGS_MODULE'] = 'test_projects.test_proj.settings'
 django.setup()
 
 from rest_framework_signature import authentication

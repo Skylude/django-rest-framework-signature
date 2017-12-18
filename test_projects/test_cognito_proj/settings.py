@@ -20,7 +20,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'l(st8u59z6dbs4f$h#)+b=n!x8_om@1jcl&=*(b_%-(_$$=oo8'
+SECRET_KEY = 'l(st8u59z6dbs4f$h#)+b=n!x8_em@1jcl&=*(b_%-(_$$=oo8'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'rest_framework',
     'rest_framework_signature.apps.RestFrameworkSignatureAppConfig',
-    'test_app.apps.TestAppConfig',
+    'test_projects.test_cognito_proj.test_cognito_app.apps.TestCognitoAppConfig',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -54,7 +54,7 @@ MIDDLEWARE_CLASSES = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'test_proj.urls'
+ROOT_URLCONF = 'test_projects.test_cognito_proj.urls'
 
 TEMPLATES = [
     {
@@ -72,8 +72,6 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'test_proj.wsgi.application'
-
 
 # Database
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
@@ -81,7 +79,7 @@ WSGI_APPLICATION = 'test_proj.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'django_rest_framework_signature',
+        'NAME': 'drfsig_cognito',
         'USER': 'test',
         'PASSWORD': 'test',
         'HOST': 'localhost',
@@ -143,10 +141,10 @@ REST_FRAMEWORK = {
 REST_FRAMEWORK_SIGNATURE = {
     'SUPER_KEY_AUTH': 'super-key-test',
     'DATABASE_ENGINE': 'mssql',
-    'USER_DOCUMENT': 'test_app.models.User',
-    'APPLICATION_DOCUMENT': 'test_app.models.ApiKey',
-    'AUTH_TOKEN_DOCUMENT': 'test_app.models.AuthToken',
-    'API_PERMISSION_MODEL': 'test_app.models.ApiPermission',
+    'USER_DOCUMENT': 'test_projects.test_cognito_proj.test_cognito_app.models.User',
+    'APPLICATION_DOCUMENT': 'test_projects.test_cognito_proj.test_cognito_app.models.ApiKey',
+    'AUTH_TOKEN_DOCUMENT': 'test_projects.test_cognito_proj.test_cognito_app.models.AuthToken',
+    'API_PERMISSION_MODEL': 'test_projects.test_cognito_proj.test_cognito_app.models.ApiPermission',
     'BYPASS_URLS': [],
     'SSO_TOKEN_CLASSES': [],
     'FULL_ACCESS_API_KEY_NAMES': ['test-app'],
