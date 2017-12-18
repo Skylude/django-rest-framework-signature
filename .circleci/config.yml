@@ -63,9 +63,9 @@ jobs:
             mkdir xunit
             . venv/bin/activate
             cd test_projects/test_proj
-            python manage.py test test_projects.test_proj.test_app --with-xunit --xunit-file=../../../xunit/xunit-test_proj.xml
+            python manage.py test test_projects.test_proj.test_app --with-xunit --xunit-file=../../xunit/xunit-test_proj.xml
             cd ../test_cognito_proj
-            python manage.py test test_projects.test_cognito_proj.test_cognito_app --with-xunit --xunit-file=../../../xunit/xunit-test_proj.xml
+            python manage.py test test_projects.test_cognito_proj.test_cognito_app --with-xunit --xunit-file=../../xunit/xunit-test_proj.xml
 
       # store test results
       - store_test_results:
