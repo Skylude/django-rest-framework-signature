@@ -2,7 +2,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_signature import authentication
 
-from test_app.models import *
 
 class ApiKeyHandler(APIView):
     """

@@ -5,6 +5,32 @@ This adds signature authentication to Django / Rest Framework. In addition it pr
 ### WINDOWS REQUIREMENTS
 In order to build in Windows environments you need to have the C++ compiler installed. This can be done within Visual Studio 2015 by installing the Visual C++ tools for Windows
 
+## Testing
+### Run tests with manage.py
+To run tests in test projects:
+```
+cd test_projects/test_proj
+python manage.py test test_projects.test_proj.test_app
+
+cd test_projects/test_cognito_proj
+python manage.py test test_projects.test_cognito_proj.test_cognito_app
+```
+
+### Run tests without manage.py
+If you are debugging or running them without manage.py you need to create the databases:
+ * drfsig for test_proj
+ * drfsig_cognito for test_cognito_proj
+
+You then need to run migrations
+```
+cd test_projects/test_proj
+python manage.py migrate
+
+cd test_projects/test_cognito_proj
+python manage.py migrate
+```
+
+Then you will be able to run / debug tests and code!
 
 ## SETTINGS
 
