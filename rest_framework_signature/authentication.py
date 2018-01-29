@@ -4,11 +4,13 @@ import rest_framework.authentication
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.encoding import uri_to_iri
+from jose.exceptions import JWSError, JWTError
 from mongoengine.errors import DoesNotExist
 from rest_framework import exceptions
 
 from rest_framework_signature.settings import auth_settings
 from rest_framework_signature.helpers import get_nonce, get_timestamp_milliseconds, get_hours_in_milliseconds
+from rest_framework_signature.jwt_validator import get_claims, get_client_id_from_access_token
 from rest_framework_signature.errors import ErrorMessages
 
 
@@ -22,7 +24,9 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
     * key -- The string identifying the token
     * user -- The user to which the token belongs
     """
-    auth_token_model = auth_settings.get_auth_token_document()
+    cognito_enabled = auth_settings.COGNITO_ENABLED
+    if not cognito_enabled:
+        auth_token_model = auth_settings.get_auth_token_document()
     bypass_auth_urls = auth_settings.BYPASS_URLS
     unsecured_urls = auth_settings.UNSECURED_URLS
 
@@ -51,25 +55,48 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
             return AnonymousUser, None
 
         # regular authentication
-        auth = rest_framework.authentication.get_authorization_header(request).split()
+        auth_header = rest_framework.authentication.get_authorization_header(request)
+        if not self.cognito_enabled:
+            auth = auth_header.split()
 
-        if not auth or auth[0].lower() != b'token':
-            raise exceptions.AuthenticationFailed('No Auth Header Present')
+            if not auth or auth[0].lower() != b'token':
+                raise exceptions.AuthenticationFailed('No Auth Header Present')
 
-        if len(auth) == 1:
-            msg = 'Invalid token header. No credentials provided.'
-            raise exceptions.AuthenticationFailed(msg)
-        elif len(auth) > 2:
-            msg = 'Invalid token header. Token string should not contain spaces.'
-            raise exceptions.AuthenticationFailed(msg)
+            if len(auth) == 1:
+                msg = 'Invalid token header. No credentials provided.'
+                raise exceptions.AuthenticationFailed(msg)
+            elif len(auth) > 2:
+                msg = 'Invalid token header. Token string should not contain spaces.'
+                raise exceptions.AuthenticationFailed(msg)
 
-        return self.authenticate_credentials(auth[1])
+            return self.authenticate_credentials(auth[1])
+        else:
+            if not auth_header:
+                raise exceptions.AuthenticationFailed('No Auth Header Present')
+            try:
+                cognito_client_id = get_client_id_from_access_token(auth_header)
+            except (JWSError, JWTError) as ex:
+                raise exceptions.AuthenticationFailed('Error decoding token: {0}'.format(ex.args[0]))
+            try:
+                claims = get_claims(auth_header, cognito_client_id)
+            except (JWSError, JWTError) as ex:
+                raise exceptions.AuthenticationFailed('Error decoding token: {0}'.format(ex.args[0]))
+            return self.authenticate_cognito(claims)
 
     @staticmethod
-    def authenticate_credentials(key):
-        auth_token_model = auth_settings.get_auth_token_document()
+    def authenticate_cognito(claims):
+        sub = claims.get('sub', None)
+        user_model = auth_settings.get_user_document()
         try:
-            token = auth_token_model.objects.get(key=key.decode('UTF-8'))
+            user = user_model.objects.get(cognito_sub_id=sub)
+        except ObjectDoesNotExist:
+            raise exceptions.AuthenticationFailed('No user found with cognito sub: {0}'.format(sub))
+        else:
+            return user, None
+
+    def authenticate_credentials(self, key):
+        try:
+            token = self.auth_token_model.objects.get(key=key.decode('UTF-8'))
         except (DoesNotExist, ObjectDoesNotExist):
             raise exceptions.AuthenticationFailed('Invalid token')
 

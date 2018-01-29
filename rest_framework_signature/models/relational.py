@@ -1,5 +1,6 @@
 import uuid
 
+from django.core.validators import MinLengthValidator
 from django.db import models
 from django.utils import timezone
 
@@ -35,6 +36,20 @@ class AuthToken(models.Model):
     user = models.ForeignKey('User')
     updated = models.DateTimeField(null=False, default=timezone.now)
     created = models.DateTimeField(null=False, default=timezone.now)
+
+
+class CognitoUser(models.Model):
+    class ErrorMessages:
+        NO_SUB_ID_PROVIDED = 'No Cognito sub id provided'
+
+    id = models.AutoField(primary_key=True)
+    cognito_sub_id = models.CharField(max_length=36, validators=[MinLengthValidator(36)], unique=True, blank=False,
+                                      null=False)
+
+    # have to include this so django will run min_length validator upon save
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super(CognitoUser, self).save(*args, **kwargs)
 
 
 class User(models.Model):

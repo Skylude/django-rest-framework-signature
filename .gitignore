@@ -4,3 +4,4 @@ __pycache__/
 dist/*
 MANIFEST
 xunit/*
+.DS_STORE

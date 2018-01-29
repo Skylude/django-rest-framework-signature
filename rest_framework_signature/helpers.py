@@ -83,13 +83,18 @@ def generate_email_address():
 
 class RestFrameworkSignatureTestClass(unittest.TestCase):
 
+    cognito_enabled = auth_settings.COGNITO_ENABLED
     user_model = auth_settings.get_user_document()
     application_model = auth_settings.get_application_document()
-    auth_token_model = auth_settings.get_auth_token_document()
+    if not cognito_enabled:
+        auth_token_model = auth_settings.get_auth_token_document()
 
     def get_headers(self, url, body=None):
         headers = self.get_headers_without_auth(url, body)
-        headers['HTTP_AUTHORIZATION'] = 'Token {0}'.format(self.token.key)
+        if not self.cognito_enabled:
+            headers['HTTP_AUTHORIZATION'] = 'Token {0}'.format(self.token.key)
+        else:
+            headers['HTTP_AUTHORIZATION'] = self.token
         return headers
 
     def get_headers_without_auth(self, url, body=None):
@@ -107,25 +112,35 @@ class RestFrameworkSignatureTestClass(unittest.TestCase):
         # create client to access api endpoints
         self.api_client = APIClient()
 
-        # create a user to use to authenticate against
-        username = generate_email_address()
-        salt = bcrypt.gensalt()
-        m = hashlib.sha1()
-        m.update('pass1234'.encode('utf-8'))
-        sha1_password = m.hexdigest()
-        m = hashlib.sha1()
-        m.update(sha1_password.encode('utf-8'))
-        m.update(salt)
-        password = m.hexdigest()
-        test_user = self.user_model(
-            username=username,
-            password=password,
-            salt=salt
-        )
-        test_user.save()
-
-        # create an authentication token
-        token, created = self.auth_token_model.objects.get_or_create(user=test_user)
+        if not self.cognito_enabled:
+            # create a user to use to authenticate against
+            username = generate_email_address()
+            salt = bcrypt.gensalt()
+            m = hashlib.sha1()
+            m.update('pass1234'.encode('utf-8'))
+            sha1_password = m.hexdigest()
+            m = hashlib.sha1()
+            m.update(sha1_password.encode('utf-8'))
+            m.update(salt)
+            password = m.hexdigest()
+            test_user = self.user_model(
+                username=username,
+                password=password,
+                salt=salt
+            )
+            test_user.save()
+            # create an authentication token
+            token, created = self.auth_token_model.objects.get_or_create(user=test_user)
+            self.sha1_password = sha1_password
+            self.token = token
+        else:
+            # this is just made up so you will need to mock your cognito user otherwise all will fail
+            cognito_sub_id = str(uuid.uuid4())[:30] + str(uuid.uuid4())[:6]
+            test_user = self.user_model(
+                cognito_sub_id=cognito_sub_id
+            )
+            test_user.save()
+            self.token = str(uuid.uuid4())[:15]
 
         # create a signature DeviceToken to hash our requests
         access_key = str(uuid.uuid4())[:10]
@@ -136,10 +151,7 @@ class RestFrameworkSignatureTestClass(unittest.TestCase):
             secret_access_key=secret_access_key
         )
         device_token.save()
-
-        self.token = token
         self.user = test_user
-        self.sha1_password = sha1_password
         self.device_token = device_token
 
     def tearDown(self):
