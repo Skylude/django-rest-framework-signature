@@ -91,6 +91,8 @@ class AuthSettings(object):
         return getattr(module, name[dot + 1:])
 
     def get_auth_token_document(self):
+        if 'COGNITO_ENABLED' in self.user_settings.keys() and self.user_settings['COGNITO_ENABLED'] is True:
+            return None
         try:
             name = self.user_settings['AUTH_TOKEN_DOCUMENT']
         except KeyError:
