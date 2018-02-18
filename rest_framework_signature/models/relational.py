@@ -24,8 +24,8 @@ class ApiKey(models.Model):
 
 class ApiPermission(models.Model):
     id = models.AutoField(primary_key=True)
-    api_key = models.ForeignKey('ApiKey', null=False)
-    api_endpoint = models.ForeignKey('ApiEndpoint', null=False)
+    api_key = models.ForeignKey('ApiKey', null=False, on_delete=models.CASCADE)
+    api_endpoint = models.ForeignKey('ApiEndpoint', null=False, on_delete=models.CASCADE)
     methods = models.CharField(max_length=32, null=True, blank=True)
 
 
@@ -33,7 +33,7 @@ class AuthToken(models.Model):
     id = models.AutoField(primary_key=True)
     key = models.CharField(max_length=80, null=False, default=generate_key)
     auth_type = models.CharField(max_length=150, null=True, blank=True)
-    user = models.ForeignKey('User')
+    user = models.ForeignKey('User', on_delete=models.CASCADE)
     updated = models.DateTimeField(null=False, default=timezone.now)
     created = models.DateTimeField(null=False, default=timezone.now)
 
@@ -60,9 +60,9 @@ class User(models.Model):
     last_name = models.CharField(max_length=100, null=False)
     is_active = models.BooleanField(null=False, default=True)
     created = models.DateTimeField(null=False, default=timezone.now)
-    created_by = models.ForeignKey('User', null=True, blank=True, related_name='users_created')
+    created_by = models.ForeignKey('User', null=True, blank=True, related_name='users_created', on_delete=models.CASCADE)
     updated = models.DateTimeField(null=False, default=timezone.now)
-    updated_by = models.ForeignKey('User', null=True, blank=True, related_name='users_updated')
+    updated_by = models.ForeignKey('User', null=True, blank=True, related_name='users_updated', on_delete=models.CASCADE)
     salt = models.CharField(max_length=50, null=True, blank=True)
     password_reset_token = models.CharField(max_length=50, null=True, blank=True)
     password_reset_token_created = models.DateTimeField(null=True, blank=True)
