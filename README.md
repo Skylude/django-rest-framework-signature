@@ -2,6 +2,10 @@
 
 This adds signature authentication to Django / Rest Framework. In addition it provides an easy to use password reset module apart from Django's built in.
 
+### Breaking Changes
+When updating past 1.0.4.dev1 you will be required to install the following pip packages:
+python-jose
+
 ### WINDOWS REQUIREMENTS
 In order to build in Windows environments you need to have the C++ compiler installed. This can be done within Visual Studio 2015 by installing the Visual C++ tools for Windows
 
