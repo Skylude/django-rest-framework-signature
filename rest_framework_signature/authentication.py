@@ -55,7 +55,8 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
             return AnonymousUser, None
 
         try:
-            api_key = self.application_model.objects.get(pk=request.api_key_id)
+            application_model = auth_settings.get_application_document()
+            api_key = application_model.objects.get(pk=request.api_key_id)
         except ObjectDoesNotExist:
             api_key = None
 
