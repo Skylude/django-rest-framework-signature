@@ -54,6 +54,16 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
         if auth_settings.DISABLE_USER_AUTH:
             return AnonymousUser, None
 
+        try:
+            api_key = self.auth_token_model.objects.get(pk=request.api_key_id)
+        except ObjectDoesNotExist:
+            api_key = None
+
+        # if specific API keys do not need user auth the bypass it
+        if api_key and auth_settings.BYPASS_USER_AUTH_API_KEY_NAMES and \
+                api_key.name in auth_settings.BYPASS_USER_AUTH_API_KEY_NAMES:
+            return AnonymousUser, None
+
         # regular authentication
         auth_header = rest_framework.authentication.get_authorization_header(request)
         if not self.cognito_enabled:

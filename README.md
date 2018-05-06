@@ -126,6 +126,8 @@ This setting will disable the requirement of having a user authenticated with ea
 ### BYPASS_URLS
 This setting is for URLS that can bypass user authentication / api keys. There are times when you need to submit certain requests and do not have a user logged in.
 
+### BYPASS_USER_AUTH_API_KEY_NAMES ###
+This setting is for Api Keys you want to use that do not utilize user authentication but still need access to specific endpoints and you don't wnat to add them all the BYPASS_URLS
 
 ### UNSECURED_URLS
 This setting is for URLS that do not need an ApiKey OR an authenticated user. They should be used sparingly and the usual suspects for this is some ping endpoint to check uptime.

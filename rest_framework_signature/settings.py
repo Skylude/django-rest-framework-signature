@@ -40,6 +40,7 @@ DEFAULTS = {
     ],
     'SSO_TOKEN_CLASSES': None,
     'FULL_ACCESS_API_KEY_NAMES': None,
+    'BYPASS_USER_AUTH_API_KEY_NAMES': None,
     'MULTIPART_POST_URLS': None
 }
 
