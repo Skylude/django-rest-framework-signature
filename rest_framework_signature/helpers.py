@@ -10,6 +10,7 @@ from collections import OrderedDict
 import bcrypt
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.utils import timezone
+from future.moves import collections
 from rest_framework.test import APIClient
 
 from rest_framework_signature.settings import auth_settings
@@ -38,30 +39,35 @@ def get_timestamp_milliseconds(dt=None):
 
 
 def sort_body(data):
-    res = OrderedDict()
-    for k, v in sorted(data.items()):
-        # everything will be in unicode unless we've converted it and went to the next level of depth
-        if isinstance(v, str):
-            try:
-                parsed_data = json.loads(v)
-            except ValueError:
-                parsed_data = v
-            if isinstance(parsed_data, dict):
-                res[k] = sort_body(parsed_data)
-            elif isinstance(parsed_data, list):
-                res[k] = [sort_body(list_item) for list_item in parsed_data]
+    if isinstance(data, dict):
+        res = OrderedDict()
+        for k, v in sorted(data.items()):
+            # everything will be in unicode unless we've converted it and went to the next level of depth
+            if isinstance(v, str):
+                try:
+                    parsed_data = json.loads(v)
+                except ValueError:
+                    parsed_data = v
+                if isinstance(parsed_data, dict):
+                    res[k] = sort_body(parsed_data)
+                elif isinstance(v, collections.Iterable):
+                    res[k] = [sort_body(list_item) for list_item in parsed_data]
+                else:
+                    res[k] = v
             else:
-                res[k] = v
-        else:
-            if isinstance(v, dict):
-                res[k] = sort_body(v)
-            elif isinstance(v, list):
-                res[k] = [sort_body(list_item) for list_item in v]
-            # if its a file just continue
-            elif isinstance(v, io.TextIOWrapper) or isinstance(v, InMemoryUploadedFile):
-                continue
-            else:
-                res[k] = v
+                if isinstance(v, dict):
+                    res[k] = sort_body(v)
+                elif isinstance(v, collections.Iterable):
+                    res[k] = [sort_body(list_item) for list_item in v]
+                # if its a file just continue
+                elif isinstance(v, io.TextIOWrapper) or isinstance(v, InMemoryUploadedFile):
+                    continue
+                else:
+                    res[k] = v
+    if isinstance(data, list):
+        res = [sort_body(list_item) for list_item in data]
+    else:
+        res = data
     return res
 
 

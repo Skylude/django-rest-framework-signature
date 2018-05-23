@@ -80,7 +80,7 @@ class AuthenticationTestsWithApiKeyWithNoPermissions(RestFrameworkSignatureTestC
         result = self.api_client.get(url, format='json', **headers)
 
         # assert
-        self.assertEquals(result.status_code, status.HTTP_200_OK)
+        self.assertEqual(result.status_code, status.HTTP_200_OK)
 
     def test_get_endpoint_without_access(self):
         url = '/apiKeys'
@@ -381,5 +381,4 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         first_call = mock_get.call_args_list[0]
         request_arg = first_call[0][0]
         self.assertEqual(request_arg.api_key_id, self.device_token.id)
-
 

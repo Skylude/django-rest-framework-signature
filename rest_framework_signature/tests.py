@@ -12,6 +12,7 @@ class MockRequest:
     META = {}
     path = '/test'
     method = 'GET'
+    api_key_id = None
 
     def get_full_path(self):
         return self.path
@@ -27,7 +28,8 @@ class AuthenticationTests(unittest.TestCase):
     @unittest.mock.patch('rest_framework_signature.authentication.TokenAuthentication.authenticate_credentials')
     @unittest.mock.patch('rest_framework_signature.authentication.TokenAuthentication.check_signature')
     @unittest.mock.patch('rest_framework_signature.authentication.rest_framework.authentication')
-    def test_authenticate_calls_check_signature(self, mock_rest_framework_authentication, mock_check_signature, mock_authenticate_credentials):
+    def test_authenticate_calls_check_signature(self, mock_rest_framework_authentication, mock_check_signature,
+                                                mock_authenticate_credentials):
         # arrange
         mock_check_signature.return_value = True
         mock_authenticate_credentials.return_value = self.mock_user, self.mock_token
