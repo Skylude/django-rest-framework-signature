@@ -178,27 +178,3 @@ class RestFrameworkSignatureHelpersTests(RestFrameworkSignatureTestClass):
         self.assertEqual(result_3, body_3)
         self.assertEqual(result_4, body_4)
         self.assertEqual(result_5, body_5)
-
-    def test_nonce_equality(self):
-        timestamp = datetime.datetime.timestamp(datetime.datetime.now())
-        url = 'asdfjhkl(handy);-thatsnotallasyoucantell'
-        secret = 'ssssssssssssssshhhhhhhhhhhhhhhhhhhhhhhhhhh...............'
-        body = """{
-            'array_1': [900, 'a', 'b', 3, 'd'],
-            'array_2': [{'id': 1}, {'id': 2}, {'id': 3}],
-            'array_c': [{'{foo': '{"bar": "oque"}'}],
-            'dict_1': dict(pen='Pineapple', pineapple='pen',
-                           put_them_together=['pen', 'pineapple', 'pineapple',
-                                              {'apple': 'pineappleapplepen'}]),
-            'simple_object': 'rocketMortgageByQuickenLoansTM',
-            'Null object': None,
-            'string_object': 'string'
-        }"""
-
-        result_1 = get_nonce(timestamp, url, secret, body=body)
-
-        sleep(5)
-
-        result_2 = get_nonce(timestamp, url, secret, body=body)
-
-        self.assertEqual(result_1, result_2)
