@@ -40,35 +40,34 @@ def get_timestamp_milliseconds(dt=None):
 
 def sort_body(data):
     if isinstance(data, dict):
-        res = OrderedDict()
-        for k, v in sorted(data.items()):
+        sorted_result = OrderedDict()
+        # Only sort by keys in dictionaries. Keys should be strings, and must all be the same object type.
+        #   sorted() fails silently when comparing different types, such as a string and an integer.
+        for key, value in sorted(data.items()):
             # everything will be in unicode unless we've converted it and went to the next level of depth
-            if isinstance(v, str):
+            if isinstance(value, str):
                 try:
-                    parsed_data = json.loads(v)
+                    # If we parse the JSON successfully, give the work to a further nested sort_body function
+                    parsed_value = json.loads(value)
+                    sorted_result[key] = sort_body(parsed_value)
                 except ValueError:
-                    parsed_data = v
-                if isinstance(parsed_data, dict):
-                    res[k] = sort_body(parsed_data)
-                elif isinstance(v, collections.Iterable):
-                    res[k] = [sort_body(list_item) for list_item in parsed_data]
-                else:
-                    res[k] = v
+                    sorted_result[key] = value
+            elif isinstance(value, dict) or isinstance(value, OrderedDict):
+                sorted_result[key] = sort_body(value)
+            elif isinstance(value, list) or isinstance(value, set):
+                # Sorting arrays breaks compatibility, cannot be implemented in drfsig 1.x
+                sorted_result[key] = [sort_body(list_item) for list_item in value]
+            elif isinstance(value, io.TextIOWrapper) or isinstance(value, InMemoryUploadedFile):
+                # There's no sorting to be done with a file.
+                continue
             else:
-                if isinstance(v, dict):
-                    res[k] = sort_body(v)
-                elif isinstance(v, collections.Iterable):
-                    res[k] = [sort_body(list_item) for list_item in v]
-                # if its a file just continue
-                elif isinstance(v, io.TextIOWrapper) or isinstance(v, InMemoryUploadedFile):
-                    continue
-                else:
-                    res[k] = v
-    if isinstance(data, list):
-        res = [sort_body(list_item) for list_item in data]
-    else:
-        res = data
-    return res
+                sorted_result[key] = value
+        return sorted_result
+    if isinstance(data, list) or isinstance(data, set):
+        # Just in case the list contains dictionaries that need sorted
+        return [sort_body(list_item) for list_item in data]
+    # Anything that isn't a list or dict gets ignored
+    return data
 
 
 def check_valid_reset_token(reset_token, user):
