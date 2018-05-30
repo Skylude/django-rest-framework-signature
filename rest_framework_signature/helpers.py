@@ -39,6 +39,22 @@ def get_timestamp_milliseconds(dt=None):
 
 
 def sort_body(data):
+    """
+    Where possible, sorts all dictionary and dictionary-like items by key. Reliably sorts
+    root-level dictionaries, nested dictionaries, and stringified dictionaries. OrderedDict,
+    list, and set types will not be sorted, but the objects they contain are subject to sorting.
+
+    Some edge cases may produce unexpected sorting, including but not limited to:
+        - Strings with JSON, list, or set formatted contents will be converted to dict format, with objects
+            cast to their inferred types as per json.loads() best judgement
+        - OrderedDicts keys won't be sorted, but OrderedDict[key] values will have a sort attempted
+        - If contained in a dict, lists and sets will recursively sort each item. Items are not sorted
+            within the list, but are sorted within themselves
+                Example: sort_body({"a": [{"c": 1, "b": 2}]}) == {"a": [{"b": 2. "c": 1}]}
+
+    :param data: The payload to be sorted before nonce calculation
+    :return: Sorted data
+    """
     if isinstance(data, dict):
         sorted_result = OrderedDict()
         # Only sort by keys in dictionaries. Keys should be strings, and must all be the same object type.
@@ -49,7 +65,10 @@ def sort_body(data):
                 try:
                     # If we parse the JSON successfully, give the work to a further nested sort_body function
                     parsed_value = json.loads(value)
-                    sorted_result[key] = sort_body(parsed_value)
+                    if isinstance(parsed_value, dict) or isinstance(parsed_value, list) or isinstance(parsed_value, set):
+                        sorted_result[key] = sort_body(parsed_value)
+                    else:  # we only want to use the parsed value if result is dict
+                        sorted_result[key] = value
                 except ValueError:
                     sorted_result[key] = value
             elif isinstance(value, dict) or isinstance(value, OrderedDict):
