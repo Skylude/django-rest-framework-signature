@@ -120,7 +120,7 @@ class RestFrameworkSignatureHelpersTests(RestFrameworkSignatureTestClass):
                                              ('Latitude', 37.7668),
                                              ('Longitude', -122.3959),
                                              ('State', 'CA'),
-                                             ('Zip', 94107),
+                                             ('Zip', '94107'),
                                              ('precision', 'zip')
                                          ]),
                                          OrderedDict([
@@ -130,7 +130,7 @@ class RestFrameworkSignatureHelpersTests(RestFrameworkSignatureTestClass):
                                              ('Latitude', 37.371991),
                                              ('Longitude', -122.02602),
                                              ('State', 'CA'),
-                                             ('Zip', 94085),
+                                             ('Zip', '94085'),
                                              ('precision', 'zip')
                                          ])
                                      ])])
@@ -167,15 +167,15 @@ class RestFrameworkSignatureHelpersTests(RestFrameworkSignatureTestClass):
                                   "links": {"self": "http://example.com/comments/12"}}]}
 
         expected_links = ('data', [OrderedDict(
-            [('attributes', OrderedDict([('title', 'JSON API paints my bikeshed!')])), ('id', 1),
+            [('attributes', OrderedDict([('title', 'JSON API paints my bikeshed!')])), ('id', '1'),
              ('links', OrderedDict([('self', 'http://example.com/articles/1')])),
              ('relationships', OrderedDict([
                  ('author', OrderedDict([
-                     ('data', OrderedDict([('id', 9), ('type', 'people')])),
+                     ('data', OrderedDict([('id', '9'), ('type', 'people')])),
                      ('links', OrderedDict([('related', 'http://example.com/articles/1/author'),
                                             ('self', 'http://example.com/articles/1/author')]))])),
-                 ('comments', OrderedDict([('data', [OrderedDict([('id', 5), ('type', 'comments')]),
-                                                     OrderedDict([('id', 12), ('type', 'comments')])]),
+                 ('comments', OrderedDict([('data', [OrderedDict([('id', '5'), ('type', 'comments')]),
+                                                     OrderedDict([('id', '12'), ('type', 'comments')])]),
                                            ('links', OrderedDict([('related', 'http://example.com/articles'),
                                                                   ('self', 'http://example.com/articles/1')]))]))])),
              ('type', 'articles')])])
@@ -183,18 +183,18 @@ class RestFrameworkSignatureHelpersTests(RestFrameworkSignatureTestClass):
         expected_data = ('included', [
             OrderedDict([
                 ('attributes', OrderedDict([('first-name', 'Dan'), ('last-name', 'Gebhardt'), ('twitter', 'dgeb')])),
-                ('id', 9), ('links', OrderedDict([('self', 'http://example.com/people/9')])), ('type', 'people')]),
+                ('id', '9'), ('links', OrderedDict([('self', 'http://example.com/people/9')])), ('type', 'people')]),
             OrderedDict([('attributes', OrderedDict([('body', 'First!')])),
-                         ('id', 5),
+                         ('id', '5'),
                          ('links', OrderedDict([('self', 'http://example.com/comments/5')])),
                          ('relationships', OrderedDict([
                              ('author', OrderedDict([
-                                 ('data', OrderedDict([('id', 2), ('type', 'people')]))]))])),
+                                 ('data', OrderedDict([('id', '2'), ('type', 'people')]))]))])),
                          ('type', 'comments')]),
-            OrderedDict([('attributes', OrderedDict([('body', 'I like XML better')])), ('id', 12),
+            OrderedDict([('attributes', OrderedDict([('body', 'I like XML better')])), ('id', '12'),
                          ('links', OrderedDict([('self', 'http://example.com/comments/12')])),
                          ('relationships', OrderedDict([
-                             ('author', OrderedDict([('data', OrderedDict([('id', 9), ('type', 'people')]))]))])),
+                             ('author', OrderedDict([('data', OrderedDict([('id', '9'), ('type', 'people')]))]))])),
                          ('type', 'comments')])])
 
         expected_included = ('links', OrderedDict([('last', 'http://example.com/articles?page[offset]=10'),
@@ -212,7 +212,7 @@ class RestFrameworkSignatureHelpersTests(RestFrameworkSignatureTestClass):
     def test_sort_body_with_simple_array_body(self):
         # Arrange
         body_1 = [1]
-        body_2 = '[1]'
+        body_2 = '[1, 2]'
         body_3 = [[1]]
 
         # Act
@@ -230,16 +230,20 @@ class RestFrameworkSignatureHelpersTests(RestFrameworkSignatureTestClass):
         body_1 = {0: 1}
         body_2 = '{0: 1}'
         body_3 = {'[[1]]': 0}
+        body_4 = {'my_array': '[3, 1, 2]'}
+        expected_4 = {'my_array': [3, 1, 2]}
 
         # Act
         result_1 = sort_body(body_1)
         result_2 = sort_body(body_2)
         result_3 = sort_body(body_3)
+        result_4 = sort_body(body_4)
 
         # Assert
         self.assertEqual(result_1, body_1)
         self.assertEqual(result_2, body_2)
         self.assertEqual(result_3, body_3)
+        self.assertEqual(result_4, expected_4)
 
     def test_sort_body_edge_cases_1(self):
         # Arrange
@@ -265,13 +269,14 @@ class RestFrameworkSignatureHelpersTests(RestFrameworkSignatureTestClass):
 
     def test_sort_body_edge_cases_2(self):
         # Arrange
-        body_1 = {'never': '{None: None}'}
+        body_1 = {"never": '{"never": "never"}'}
+        expected_1 = OrderedDict([('never', OrderedDict([("never", "never")]))])
         body_2 = {'gonna': {'var': '{None: [None]}'}}
         body_3 = {'give': {1: str({'None': 0})}}
         body_4 = {'unitNumber': 'A101', 'communityId': 1, 'street_address_1': '20 S 540 N',
                   'city': 'Logan', 'state': 'UT', 'zip': '12345'}
         expected_4 = OrderedDict([('city', 'Logan'), ('communityId', 1), ('state', 'UT'),
-                                  ('street_address_1', '20 S 540 N'), ('unitNumber', 'A101'), ('zip', 12345)])
+                                  ('street_address_1', '20 S 540 N'), ('unitNumber', 'A101'), ('zip', '12345')])
         body_5 = {'up': """{"array_1": "[1000, 900, 'a', 'b', 3, 'd']"}"""}
         expected_5 = OrderedDict([('up', OrderedDict([('array_1', "[1000, 900, 'a', 'b', 3, 'd']")]))])
         # Act
@@ -282,7 +287,7 @@ class RestFrameworkSignatureHelpersTests(RestFrameworkSignatureTestClass):
         result_5 = sort_body(body_5)
 
         # Assert
-        self.assertEqual(result_1, body_1)
+        self.assertEqual(result_1, expected_1)
         self.assertEqual(result_2, body_2)
         self.assertEqual(result_3, body_3)
         self.assertEqual(result_4, expected_4)
