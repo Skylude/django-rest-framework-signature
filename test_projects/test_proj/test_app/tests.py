@@ -5,6 +5,7 @@ import django
 import hashlib
 import os
 import unittest
+import unittest.mock
 import uuid
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'test_projects.test_proj.settings'
@@ -381,4 +382,15 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         first_call = mock_get.call_args_list[0]
         request_arg = first_call[0][0]
         self.assertEqual(request_arg.api_key_id, self.device_token.id)
+
+    def test_multi_filters_url_escaping(self):
+        # arrange
+        url = '/users?filters=client_id=1|is_active=True&include=report'
+        headers = self.get_headers(url)
+
+        # act
+        result = self.api_client.get(url, format='json', **headers)
+
+        # assert
+        self.assertEqual(result.status_code, status.HTTP_200_OK)
 

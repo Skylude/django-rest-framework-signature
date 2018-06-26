@@ -10,7 +10,6 @@ from collections import OrderedDict
 import bcrypt
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.utils import timezone
-from future.moves import collections
 from rest_framework.test import APIClient
 
 from rest_framework_signature.settings import auth_settings
