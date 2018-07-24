@@ -206,15 +206,20 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
         api_request_permission_model = auth_settings.get_api_request_permission_document()
 
         # grab all request permissions
+        request_permission = True
         for api_request_permission in api_request_permission_model.objects.filter(api_key=api_key):
             # check each endpoint to see if url matches the regex
             reg_ex = re.compile(api_request_permission.api_endpoint.endpoint)
             if reg_ex.match(url):
                 # we matched the regex now just see if we have access with these parameters
                 if api_request_permission.request_key not in request.data.keys():
-                    return False
+                    request_permission = False
+                    continue
 
                 if api_request_permission.request_value != request.data.get(api_request_permission.request_key, None):
-                    return False
+                    request_permission = False
+                    continue
 
-        return method_permission
+                request_permission = True
+
+        return method_permission and request_permission
