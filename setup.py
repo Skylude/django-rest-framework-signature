@@ -3,7 +3,7 @@ from distutils.core import setup
 
 setup(
     name='django-rest-framework-signature',
-    version='1.1.8.dev2',
+    version='1.2.0.dev1',
     description='Django Rest Framework Signature Authentication',
     author='Skyler Cain',
     author_email='skylercain@gmail.com',

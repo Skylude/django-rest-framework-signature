@@ -130,6 +130,7 @@ REST_FRAMEWORK_SIGNATURE = {
     'USER_DOCUMENT': 'test_projects.test_cognito_proj.test_cognito_app.models.User',
     'APPLICATION_DOCUMENT': 'test_projects.test_cognito_proj.test_cognito_app.models.ApiKey',
     'API_PERMISSION_MODEL': 'test_projects.test_cognito_proj.test_cognito_app.models.ApiPermission',
+    'API_REQUEST_PERMISSION_MODEL': 'test_projects.test_cognito_proj.test_cognito_app.models.ApiRequestPermission',
     'BYPASS_URLS': [
         ('POST', '/auth/register'),
     ],

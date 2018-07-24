@@ -60,6 +60,7 @@ class AuthenticationTestsWithApiKeyWithNoPermissions(RestFrameworkSignatureTestC
 
         # give this api key some permissions
         self.endpoint_with_access = '/users'
+        self.endpoint_with_access_with_request_permissions = '/apiEndpoints'
         try:
             endpoint = ApiEndpoint.objects.get(endpoint=self.endpoint_with_access)
         except ObjectDoesNotExist:
@@ -67,6 +68,26 @@ class AuthenticationTestsWithApiKeyWithNoPermissions(RestFrameworkSignatureTestC
             endpoint.save()
         api_permission = ApiPermission(api_endpoint=endpoint, methods='GET,PUT,POST', api_key=device_token)
         api_permission.save()
+
+        try:
+            endpoint = ApiEndpoint.objects.get(endpoint=self.endpoint_with_access_with_request_permissions)
+        except ObjectDoesNotExist:
+            endpoint = ApiEndpoint(endpoint=self.endpoint_with_access_with_request_permissions)
+            endpoint.save()
+        api_permission = ApiPermission(api_endpoint=endpoint, methods='GET,PUT,POST', api_key=device_token)
+        api_permission.save()
+
+        try:
+            endpoint = ApiEndpoint.objects.get(endpoint=self.endpoint_with_access_with_request_permissions)
+        except ObjectDoesNotExist:
+            endpoint = ApiEndpoint(endpoint=self.endpoint_with_access_with_request_permissions)
+            endpoint.save()
+        self.api_request_permission_key = 'hello'
+        self.api_request_permission_value = 'world'
+        api_request_permission = ApiRequestPermission(api_key=device_token, api_endpoint=endpoint,
+                                                      request_key=self.api_request_permission_key,
+                                                      request_value=self.api_request_permission_value)
+        api_request_permission.save()
 
         self.token = token
         self.user = test_user
@@ -93,6 +114,40 @@ class AuthenticationTestsWithApiKeyWithNoPermissions(RestFrameworkSignatureTestC
         # assert
         self.assertEquals(result.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEquals(result.data['detail'], ErrorMessages.API_KEY_NOT_AUTHORIZED_FOR_ENDPOINT.format(url))
+
+    def test_api_request_permission_with_permission_but_not_valid_key_returns_403(self):
+        # arrange
+        url = self.endpoint_with_access_with_request_permissions
+        body = {
+            'endpoint': str(uuid.uuid4())[:15]
+        }
+        headers = self.get_headers(url, body)
+        result = self.api_client.post(url, body, format='json', **headers)
+        self.assertEqual(result.status_code, 403)
+        self.assertEqual(result.data['detail'], ErrorMessages.API_KEY_NOT_AUTHORIZED_FOR_ENDPOINT.format(url))
+
+    def test_api_request_permission_with_permission_but_not_valid_value_returns_403(self):
+        # arrange
+        url = self.endpoint_with_access_with_request_permissions
+        body = {
+            'endpoint': str(uuid.uuid4())[:15],
+            self.api_request_permission_key: str(uuid.uuid4())[:15]
+        }
+        headers = self.get_headers(url, body)
+        result = self.api_client.post(url, body, format='json', **headers)
+        self.assertEqual(result.status_code, 403)
+        self.assertEqual(result.data['detail'], ErrorMessages.API_KEY_NOT_AUTHORIZED_FOR_ENDPOINT.format(url))
+
+    def test_api_request_permission_with_permission_posts_ok(self):
+        # arrange
+        url = self.endpoint_with_access_with_request_permissions
+        body = {
+            'endpoint': str(uuid.uuid4())[:15],
+            self.api_request_permission_key: self.api_request_permission_value
+        }
+        headers = self.get_headers(url, body)
+        result = self.api_client.post(url, body, format='json', **headers)
+        self.assertEqual(result.status_code, 200)
 
 
 class AuthenticationTests(RestFrameworkSignatureTestClass):
@@ -393,4 +448,3 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
 
         # assert
         self.assertEqual(result.status_code, status.HTTP_200_OK)
-

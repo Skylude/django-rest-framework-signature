@@ -3,6 +3,8 @@
 This adds signature authentication to Django / Rest Framework. In addition it provides an easy to use password reset module apart from Django's built in.
 
 ### Breaking Changes
+When updating past 1.2.0.dev1 you will be required to send in an APIRequetPermission model
+
 When updating past 1.0.4.dev1 you will be required to install the following pip packages:
 python-jose
 
@@ -91,6 +93,14 @@ This is the model that is utilized for the Application model. This is the ApiKey
 
 ### API_PERMISSION_MODEL
 This is the model that is used to restrict and grant access to each individual endpoint in your API. This has the following required fields on the model:
+
+
+### API_REQUEST_PERMISSION_MODEL
+This is the model that is used to restrict and grant access to each individual endpoint with specific request variables. This has the following required fields on the model:
+* api_key: ForeignKey field to the APPLICATION_DOCUMENT setting
+* api_endpoint: ForeignKey field to the ApiEndpoint model defined in relational.py
+* request_key: CharField containing the key in the request.data dictionary that you want to restrict access on
+* request_value: CharField containing the value in the request_key that you watn to restrict access on
 
 
 ### DB_SETTINGS

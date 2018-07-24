@@ -152,7 +152,7 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
         request.api_key_id = token.id
 
         # ensure that the api key has access to this url
-        api_key_has_access = self.validate_api_key(token, url, request.method)
+        api_key_has_access = self.validate_api_key(token, url, request.method, request)
         if not api_key_has_access:
             raise exceptions.PermissionDenied(ErrorMessages.API_KEY_NOT_AUTHORIZED_FOR_ENDPOINT.format(url))
 
@@ -181,19 +181,40 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
             raise exceptions.PermissionDenied(ErrorMessages.PERMISSION_DENIED + ' ' + ErrorMessages.INVALID_NONCE)
 
     @staticmethod
-    def validate_api_key(api_key, url, method):
+    def validate_api_key(api_key, url, method, request):
         if auth_settings.FULL_ACCESS_API_KEY_NAMES and api_key.name in auth_settings.FULL_ACCESS_API_KEY_NAMES:
             return True
 
-        api_permission = auth_settings.get_api_permission_document()
-        # grab all permissions
-        api_permission.objects.filter(api_key=api_key)
-        for api_permission in api_permission.objects.filter(api_key=api_key):
+        # check if we have permissions to this method
+        method_permission = False
+
+        # get the api permission model
+        api_permission_model = auth_settings.get_api_permission_document()
+
+        # grab all method permissions
+        for api_permission in api_permission_model.objects.filter(api_key=api_key):
             # check each endpoint to see if url matches the regex
             reg_ex = re.compile(api_permission.api_endpoint.endpoint)
             if reg_ex.match(url):
                 # we matched the regex now just see if we have access to that method
                 available_methods = api_permission.methods.split(',')
                 if method in available_methods:
-                    return True
-        return False
+                    method_permission = True
+                    break
+
+        # get the api request permission model
+        api_request_permission_model = auth_settings.get_api_request_permission_document()
+
+        # grab all request permissions
+        for api_request_permission in api_request_permission_model.objects.filter(api_key=api_key):
+            # check each endpoint to see if url matches the regex
+            reg_ex = re.compile(api_request_permission.api_endpoint.endpoint)
+            if reg_ex.match(url):
+                # we matched the regex now just see if we have access with these parameters
+                if api_request_permission.request_key not in request.data.keys():
+                    return False
+
+                if api_request_permission.request_value != request.data.get(api_request_permission.request_key, None):
+                    return False
+
+        return method_permission

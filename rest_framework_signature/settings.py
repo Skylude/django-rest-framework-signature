@@ -20,6 +20,7 @@ DEFAULTS = {
     'AUTH_TOKEN_DOCUMENT': None,
     'APPLICATION_DOCUMENT': None,
     'API_PERMISSION_MODEL': None,
+    'API_REQUEST_PERMISSION_MODEL': None,
     'DB_SETTINGS': None,
     'SUPER_KEY_AUTH': None,
     'SUPER_KEY_HEADER': None,
@@ -52,6 +53,7 @@ class AuthSettings(object):
     required_settings = [
         'APPLICATION_DOCUMENT',
         'API_PERMISSION_MODEL',
+        'API_REQUEST_PERMISSION_MODEL',
         'DATABASE_ENGINE',
         'USER_DOCUMENT'
     ]
@@ -111,6 +113,15 @@ class AuthSettings(object):
         module = import_module(name[:dot])
         return getattr(module, name[dot + 1:])
 
+    def get_api_request_permission_document(self):
+        try:
+            name = self.user_settings['API_REQUEST_PERMISSION_MODEL']
+        except KeyError:
+            name = self.defaults['API_REQUEST_PERMISSION_MODEL']
+        dot = name.rindex('.')
+        module = import_module(name[:dot])
+        return getattr(module, name[dot + 1:])
+
     def get_application_document(self):
         try:
             name = self.user_settings['APPLICATION_DOCUMENT']
@@ -149,6 +160,9 @@ class AuthSettings(object):
             raise InvalidAuthSettings(self.ErrorMessages.NOT_PROVIDED)
 
         if 'API_PERMISSION_MODEL' not in self.user_settings.keys():
+            raise InvalidAuthSettings(self.ErrorMessages.NOT_PROVIDED)
+
+        if 'API_REQUEST_PERMISSION_MODEL' not in self.user_settings.keys():
             raise InvalidAuthSettings(self.ErrorMessages.NOT_PROVIDED)
 
         if 'DB_SETTINGS' in self.user_settings.keys() and self.user_settings['DB_SETTINGS']:

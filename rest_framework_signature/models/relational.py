@@ -29,6 +29,14 @@ class ApiPermission(models.Model):
     methods = models.CharField(max_length=32, null=True, blank=True)
 
 
+class ApiRequestPermission(models.Model):
+    id = models.AutoField(primary_key=True)
+    api_key = models.ForeignKey('ApiKey', null=False, on_delete=models.CASCADE)
+    api_endpoint = models.ForeignKey('ApiEndpoint', null=False, on_delete=models.CASCADE)
+    request_key = models.CharField(max_length=32, null=False, blank=False)
+    request_value = models.CharField(max_length=32, null=False, blank=False)
+
+
 class AuthToken(models.Model):
     id = models.AutoField(primary_key=True)
     key = models.CharField(max_length=80, null=False, default=generate_key)

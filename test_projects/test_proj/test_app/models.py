@@ -1,6 +1,7 @@
 from django.db import models
 
-from rest_framework_signature.models.relational import ApiEndpoint, ApiKey, ApiPermission, AuthToken, User as SignatureUser
+from rest_framework_signature.models.relational import ApiEndpoint, ApiKey, ApiPermission, ApiRequestPermission, \
+    AuthToken, User as SignatureUser
 
 
 class User(SignatureUser):
