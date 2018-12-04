@@ -36,7 +36,7 @@ class MSSQLBackend(object):
     user_model = auth_settings.get_user_document()
 
     def authenticate(self, username=None, password=None, **kwargs):
-        user = self.get_user(username)
+        user = self.get_user_by_username(username)
         if not user:
             return None
         m = hashlib.sha1()
@@ -51,8 +51,14 @@ class MSSQLBackend(object):
         else:
             return None
 
-    def get_user(self, username):
+    def get_user_by_username(self, username):
         try:
             return self.user_model.objects.get(username=username)
+        except ObjectDoesNotExist:
+            return None
+
+    def get_user(self, pk):
+        try:
+            return self.user_model.objects.get(pk=pk)
         except ObjectDoesNotExist:
             return None
