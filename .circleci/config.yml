@@ -7,21 +7,14 @@ jobs:
   build:
     docker:
       - image: circleci/python:3.6.1
+      - image: circleci/postgres:9.6.2
         environment:
-        - PG_HOST=localhost
-        - PG_USER=ubuntu
-      - image: circleci/postgres:9.6
-        environment:
-        - POSTGRES_USER=ubuntu
+          POSTGRES_USER=test
 
-    working_directory: ~/repo
+    working_directory: ~/drfsig
 
     steps:
       - checkout
-
-      - run:
-          name: Wait for db
-          command: dockerize -wait tcp://localhost:5432 -timeout 1m
 
       # need to install pyodbc dependency
       - run:
@@ -46,15 +39,6 @@ jobs:
           paths:
             - ./venv
           key: v1-dependencies-{{ checksum "requirements.txt" }}
-
-      # create posgres user with superuser permissions
-      - run:
-          name: setup postgres users
-          command: |
-            sudo apt update
-            sudo apt install postgresql-client
-            sudo -u root psql -p 5432 -h 127.0.0.1 -U postgres -c "CREATE USER test WITH PASSWORD 'test';"
-            sudo -u root psql -p 5432 -h 127.0.0.1 -U postgres -c "ALTER USER test WITH superuser;"
 
       # run tests!
       - run:
