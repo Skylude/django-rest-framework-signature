@@ -35,7 +35,7 @@ class MSSQLBackend(object):
     supports_inactive_user = False
     user_model = auth_settings.get_user_document()
 
-    def authenticate(self, username=None, password=None, **kwargs):
+    def authenticate(self, request=None, username=None, password=None):
         user = self.get_user_by_username(username)
         if not user:
             return None
