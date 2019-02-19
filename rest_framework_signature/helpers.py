@@ -6,10 +6,12 @@ import time
 import unittest
 import uuid
 from collections import OrderedDict
+import warnings
 
 import bcrypt
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.utils import timezone
+from django.test import TestCase
 from rest_framework.test import APIClient
 
 from rest_framework_signature.settings import auth_settings
@@ -104,7 +106,7 @@ def generate_email_address():
     return '{0}@{1}.com'.format(str(uuid.uuid4())[:10], str(uuid.uuid4())[:5])
 
 
-class RestFrameworkSignatureTestClass(unittest.TestCase):
+class RestFrameworkSignatureTestClass(TestCase):
 
     cognito_enabled = auth_settings.COGNITO_ENABLED
     user_model = auth_settings.get_user_document()
@@ -113,6 +115,9 @@ class RestFrameworkSignatureTestClass(unittest.TestCase):
         auth_token_model = auth_settings.get_auth_token_document()
 
     def get_headers(self, url, body=None):
+        if not hasattr(self, '_api_client'):
+            self.setup_client()
+
         headers = self.get_headers_without_auth(url, body)
         if not self.cognito_enabled:
             headers['HTTP_AUTHORIZATION'] = 'Token {0}'.format(self.token.key)
@@ -121,6 +126,9 @@ class RestFrameworkSignatureTestClass(unittest.TestCase):
         return headers
 
     def get_headers_without_auth(self, url, body=None):
+        if not hasattr(self, '_api_client'):
+            self.setup_client()
+
         timestamp = str(get_timestamp_milliseconds())
         nonce = get_nonce(str(timestamp), url, self.device_token.secret_access_key, body=body)
 
@@ -132,8 +140,36 @@ class RestFrameworkSignatureTestClass(unittest.TestCase):
         return headers
 
     def setUp(self):
+        warnings.filterwarnings(action="ignore", message="unclosed", category=ResourceWarning)
+        warnings.filterwarnings(action="ignore", message="DateTimeField", category=RuntimeWarning)
+
+    @property
+    def api_client(self):
+        if not hasattr(self, '_api_client'):
+            self.setup_client()
+        return self._api_client
+    
+    @property
+    def user(self):
+        if not hasattr(self, '_api_client'):
+            self.setup_client()
+        return self._user
+
+    @property
+    def device_token(self):
+        if not hasattr(self, '_api_client'):
+            self.setup_client()
+        return self._device_token
+
+    @property
+    def sha1_password(self):
+        if not hasattr(self, '_api_client'):
+            self.setup_client()
+        return self._sha1_password
+
+    def setup_client(self):
         # create client to access api endpoints
-        self.api_client = APIClient()
+        self._api_client = APIClient()
 
         if not self.cognito_enabled:
             # create a user to use to authenticate against
@@ -154,7 +190,7 @@ class RestFrameworkSignatureTestClass(unittest.TestCase):
             test_user.save()
             # create an authentication token
             token, created = self.auth_token_model.objects.get_or_create(user=test_user)
-            self.sha1_password = sha1_password
+            self._sha1_password = sha1_password
             self.token = token
         else:
             # this is just made up so you will need to mock your cognito user otherwise all will fail
@@ -174,11 +210,11 @@ class RestFrameworkSignatureTestClass(unittest.TestCase):
             secret_access_key=secret_access_key
         )
         device_token.save()
-        self.user = test_user
-        self.device_token = device_token
+        self._user = test_user
+        self._device_token = device_token
 
     def tearDown(self):
-        pass
+        warnings.resetwarnings()
 
     class MockRequestsResponse:
         def __init__(self, status_code, text, mock_json_cb=None):

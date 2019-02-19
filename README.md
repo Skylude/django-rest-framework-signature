@@ -3,10 +3,9 @@
 This adds signature authentication to Django / Rest Framework. In addition it provides an easy to use password reset module apart from Django's built in.
 
 ### Breaking Changes
-When updating past 1.2.0.dev1 you will be required to send in an APIRequetPermission model
-
-When updating past 1.0.4.dev1 you will be required to install the following pip packages:
-python-jose
+1.3.0.dev1 Migrated to DjangoTestCase under the hood so when moving to this version you'll need to revisit your tests
+1.2.0.de 1 When updating past this version you will be required to send in an APIRequetPermission model
+1.0.4.dev1 When updating past this version you will be required to install the following pip packages: python-jose
 
 ### WINDOWS REQUIREMENTS
 In order to build in Windows environments you need to have the C++ compiler installed. This can be done within Visual Studio 2015 by installing the Visual C++ tools for Windows

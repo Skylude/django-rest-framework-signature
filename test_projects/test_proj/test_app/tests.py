@@ -1,15 +1,11 @@
 import binascii
 import bcrypt
 from datetime import timedelta
-import django
 import hashlib
 import os
 import unittest
 import unittest.mock
 import uuid
-
-os.environ['DJANGO_SETTINGS_MODULE'] = 'test_projects.test_proj.settings'
-django.setup()
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
@@ -25,30 +21,9 @@ from test_projects.test_proj.test_app.models import *
 
 class AuthenticationTestsWithApiKeyWithNoPermissions(RestFrameworkSignatureTestClass):
     def setUp(self):
-        # create client to access api endpoints
-        self.api_client = APIClient()
-
-        # create a user to use to authenticate against
-        username = generate_email_address()
-        salt = bcrypt.gensalt()
-        m = hashlib.sha1()
-        m.update('pass1234'.encode('utf-8'))
-        sha1_password = m.hexdigest()
-        m = hashlib.sha1()
-        m.update(sha1_password.encode('utf-8'))
-        m.update(salt)
-        password = m.hexdigest()
-        test_user = self.user_model(
-            username=username,
-            password=password,
-            salt=salt
-        )
-        test_user.save()
-
-        # create an authentication token
-        token, created = self.auth_token_model.objects.get_or_create(user=test_user)
-
-        # create a signature DeviceToken to hash our requests
+        self.setup_client()
+        
+        # create different token than default for no permissions
         access_key = str(uuid.uuid4())[:10]
         secret_access_key = str(uuid.uuid4())[:20]
         device_token = self.application_model(
@@ -57,6 +32,7 @@ class AuthenticationTestsWithApiKeyWithNoPermissions(RestFrameworkSignatureTestC
             secret_access_key=secret_access_key
         )
         device_token.save()
+        self._device_token = device_token
 
         # give this api key some permissions
         self.endpoint_with_access = '/users'
@@ -88,11 +64,6 @@ class AuthenticationTestsWithApiKeyWithNoPermissions(RestFrameworkSignatureTestC
                                                       request_key=self.api_request_permission_key,
                                                       request_value=self.api_request_permission_value)
         api_request_permission.save()
-
-        self.token = token
-        self.user = test_user
-        self.sha1_password = sha1_password
-        self.device_token = device_token
 
     def test_get_endpoint_with_access(self):
         url = self.endpoint_with_access
@@ -173,7 +144,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
     #    result = self.api_client.post(url, body, format='json')
     #    self.assertEqual(result.status_code, 200)
 
-    def test_post_login_with_incorrect_password(self):
+    def test_post_login_with_incorrect_username(self):
         url = '/auth/login'
         body = {
             'username': 'garble',
