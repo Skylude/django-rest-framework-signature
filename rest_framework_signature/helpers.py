@@ -161,6 +161,12 @@ class RestFrameworkSignatureTestClass(TestCase):
             self.setup_client()
         return self._device_token
 
+    @property
+    def sha1_password(self):
+        if not hasattr(self, '_api_client'):
+            self.setup_client()
+        return self._sha1_password
+
     def setup_client(self):
         # create client to access api endpoints
         self._api_client = APIClient()
@@ -184,7 +190,7 @@ class RestFrameworkSignatureTestClass(TestCase):
             test_user.save()
             # create an authentication token
             token, created = self.auth_token_model.objects.get_or_create(user=test_user)
-            self.sha1_password = sha1_password
+            self._sha1_password = sha1_password
             self.token = token
         else:
             # this is just made up so you will need to mock your cognito user otherwise all will fail
