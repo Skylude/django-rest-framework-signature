@@ -11,7 +11,7 @@ import warnings
 import bcrypt
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.utils import timezone
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from rest_framework.test import APIClient
 
 from rest_framework_signature.settings import auth_settings
@@ -149,6 +149,125 @@ class RestFrameworkSignatureTestClass(TestCase):
             self.setup_client()
         return self._api_client
     
+    @property
+    def user(self):
+        if not hasattr(self, '_api_client'):
+            self.setup_client()
+        return self._user
+
+    @property
+    def device_token(self):
+        if not hasattr(self, '_api_client'):
+            self.setup_client()
+        return self._device_token
+
+    @property
+    def sha1_password(self):
+        if not hasattr(self, '_api_client'):
+            self.setup_client()
+        return self._sha1_password
+
+    def setup_client(self):
+        # create client to access api endpoints
+        self._api_client = APIClient()
+
+        if not self.cognito_enabled:
+            # create a user to use to authenticate against
+            username = generate_email_address()
+            salt = bcrypt.gensalt()
+            m = hashlib.sha1()
+            m.update('pass1234'.encode('utf-8'))
+            sha1_password = m.hexdigest()
+            m = hashlib.sha1()
+            m.update(sha1_password.encode('utf-8'))
+            m.update(salt)
+            password = m.hexdigest()
+            test_user = self.user_model(
+                username=username,
+                password=password,
+                salt=salt
+            )
+            test_user.save()
+            # create an authentication token
+            token, created = self.auth_token_model.objects.get_or_create(user=test_user)
+            self._sha1_password = sha1_password
+            self.token = token
+        else:
+            # this is just made up so you will need to mock your cognito user otherwise all will fail
+            cognito_sub_id = str(uuid.uuid4())[:30] + str(uuid.uuid4())[:6]
+            test_user = self.user_model(
+                cognito_sub_id=cognito_sub_id
+            )
+            test_user.save()
+            self.token = str(uuid.uuid4())[:15]
+
+        # create a signature DeviceToken to hash our requests
+        access_key = str(uuid.uuid4())[:10]
+        secret_access_key = str(uuid.uuid4())[:20]
+        device_token = self.application_model(
+            name='test-app',
+            access_key=access_key,
+            secret_access_key=secret_access_key
+        )
+        device_token.save()
+        self._user = test_user
+        self._device_token = device_token
+
+    def tearDown(self):
+        warnings.resetwarnings()
+
+    class MockRequestsResponse:
+        def __init__(self, status_code, text, mock_json_cb=None):
+            self.status_code = status_code
+            self.text = text
+            self.mock_json_cb = mock_json_cb
+
+        def json(self):
+            return self.mock_json_cb
+
+
+class RestFrameworkSignatureTransactionTestClass(TransactionTestCase):
+    cognito_enabled = auth_settings.COGNITO_ENABLED
+    user_model = auth_settings.get_user_document()
+    application_model = auth_settings.get_application_document()
+    if not cognito_enabled:
+        auth_token_model = auth_settings.get_auth_token_document()
+
+    def get_headers(self, url, body=None):
+        if not hasattr(self, '_api_client'):
+            self.setup_client()
+
+        headers = self.get_headers_without_auth(url, body)
+        if not self.cognito_enabled:
+            headers['HTTP_AUTHORIZATION'] = 'Token {0}'.format(self.token.key)
+        else:
+            headers['HTTP_AUTHORIZATION'] = self.token
+        return headers
+
+    def get_headers_without_auth(self, url, body=None):
+        if not hasattr(self, '_api_client'):
+            self.setup_client()
+
+        timestamp = str(get_timestamp_milliseconds())
+        nonce = get_nonce(str(timestamp), url, self.device_token.secret_access_key, body=body)
+
+        headers = {
+            auth_settings.TIMESTAMP_HEADER: str(timestamp),
+            auth_settings.NONCE_HEADER: nonce,
+            auth_settings.API_KEY_HEADER: self.device_token.access_key
+        }
+        return headers
+
+    def setUp(self):
+        warnings.filterwarnings(action="ignore", message="unclosed", category=ResourceWarning)
+        warnings.filterwarnings(action="ignore", message="DateTimeField", category=RuntimeWarning)
+
+    @property
+    def api_client(self):
+        if not hasattr(self, '_api_client'):
+            self.setup_client()
+        return self._api_client
+
     @property
     def user(self):
         if not hasattr(self, '_api_client'):
