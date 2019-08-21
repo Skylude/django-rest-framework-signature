@@ -44,7 +44,7 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
             return AnonymousUser, None
 
         # first thing check the signature of the request
-        self.check_signature(request)
+        api_key = self.check_signature(request)
 
         # special case for posting new users
         if (request.method, request_path) in self.bypass_auth_urls:
@@ -53,12 +53,6 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
         # if they've disabled user auth simply return an anonymous user
         if auth_settings.DISABLE_USER_AUTH:
             return AnonymousUser, None
-
-        try:
-            application_model = auth_settings.get_application_document()
-            api_key = application_model.objects.get(pk=request.api_key_id)
-        except ObjectDoesNotExist:
-            api_key = None
 
         # if specific API keys do not need user auth the bypass it
         if api_key and auth_settings.BYPASS_USER_AUTH_API_KEY_NAMES and \
@@ -107,7 +101,7 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
 
     def authenticate_credentials(self, key):
         try:
-            token = self.auth_token_model.objects.get(key=key.decode('UTF-8'))
+            token = self.auth_token_model.objects.select_related('user').get(key=key.decode('UTF-8'))
         except (DoesNotExist, ObjectDoesNotExist):
             raise exceptions.AuthenticationFailed('Invalid token')
 
@@ -179,6 +173,8 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
 
         if valid_nonce != nonce:
             raise exceptions.PermissionDenied(ErrorMessages.PERMISSION_DENIED + ' ' + ErrorMessages.INVALID_NONCE)
+
+        return token
 
     @staticmethod
     def validate_api_key(api_key, url, method, request):
