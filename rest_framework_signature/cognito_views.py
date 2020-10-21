@@ -1,11 +1,4 @@
-import binascii
-from datetime import timedelta
-import hashlib
-import os
-
-import bcrypt
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.utils import timezone
+from django.core.exceptions import ValidationError
 from rest_framework_signature.settings import auth_settings
 from rest_framework import status
 from rest_framework.response import Response
