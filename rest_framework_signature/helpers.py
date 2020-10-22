@@ -3,12 +3,12 @@ import hmac
 import io
 import json
 import time
-import unittest
 import uuid
 from collections import OrderedDict
 import warnings
 
 import bcrypt
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.utils import timezone
 from django.test import TestCase, TransactionTestCase
@@ -111,8 +111,45 @@ class RestFrameworkSignatureTestClass(TestCase):
     cognito_enabled = auth_settings.COGNITO_ENABLED
     user_model = auth_settings.get_user_document()
     application_model = auth_settings.get_application_document()
+    api_endpoint_model = auth_settings.get_api_endpoint_document()
+    api_permission_model = auth_settings.get_api_permission_document()
+    api_request_permission_model = auth_settings.get_api_request_permission_document()
     if not cognito_enabled:
         auth_token_model = auth_settings.get_auth_token_document()
+
+    def create_endpoint_with_access(self, endpoint):
+        try:
+            api_endpoint = self.api_endpoint_model.objects.get(endpoint=endpoint)
+        except ObjectDoesNotExist:
+            api_endpoint = self.api_endpoint_model(endpoint=endpoint)
+            api_endpoint.save()
+
+        api_permission = self.api_permission_model(api_endpoint=api_endpoint, methods='GET,PUT,POST',
+                                                   api_key=self._device_token)
+        api_permission.save()
+
+    def create_endpoint_with_access_with_request_permissions(self, endpoint):
+        try:
+            api_endpoint = self.api_endpoint_model.objects.get(endpoint=endpoint)
+        except ObjectDoesNotExist:
+            api_endpoint = self.api_endpoint_model(endpoint=endpoint)
+            api_endpoint.save()
+        api_permission = self.api_permission_model(api_endpoint=api_endpoint, methods='GET,PUT,POST',
+                                                   api_key=self._device_token)
+        api_permission.save()
+
+        try:
+            api_endpoint = self.api_endpoint_model.objects.get(endpoint=endpoint)
+        except ObjectDoesNotExist:
+            api_endpoint = self.api_endpoint_model(endpoint=endpoint)
+            api_endpoint.save()
+        self.api_request_permission_key = 'hello'
+        self.api_request_permission_value = 'world'
+        api_request_permission = self.api_request_permission_model(api_key=self._device_token,
+                                                                   api_endpoint=api_endpoint,
+                                                                   request_key=self.api_request_permission_key,
+                                                                   request_value=self.api_request_permission_value)
+        api_request_permission.save()
 
     def get_headers(self, url, body=None):
         if not hasattr(self, '_api_client'):
@@ -140,8 +177,7 @@ class RestFrameworkSignatureTestClass(TestCase):
         return headers
 
     def setUp(self):
-        warnings.filterwarnings(action="ignore", message="unclosed", category=ResourceWarning)
-        warnings.filterwarnings(action="ignore", message="DateTimeField", category=RuntimeWarning)
+        pass
 
     @property
     def api_client(self):
@@ -167,7 +203,7 @@ class RestFrameworkSignatureTestClass(TestCase):
             self.setup_client()
         return self._sha1_password
 
-    def setup_client(self):
+    def setup_client(self, api_key=None):
         # create client to access api endpoints
         self._api_client = APIClient()
 
@@ -202,16 +238,18 @@ class RestFrameworkSignatureTestClass(TestCase):
             self.token = str(uuid.uuid4())[:15]
 
         # create a signature DeviceToken to hash our requests
-        access_key = str(uuid.uuid4())[:10]
-        secret_access_key = str(uuid.uuid4())[:20]
-        device_token = self.application_model(
-            name='test-app',
-            access_key=access_key,
-            secret_access_key=secret_access_key
-        )
-        device_token.save()
+        if not api_key:
+            access_key = str(uuid.uuid4())[:10]
+            secret_access_key = str(uuid.uuid4())[:20]
+            api_key = self.application_model(
+                name='test-app',
+                access_key=access_key,
+                secret_access_key=secret_access_key
+            )
+            api_key.save()
+
         self._user = test_user
-        self._device_token = device_token
+        self._device_token = api_key
 
     def tearDown(self):
         warnings.resetwarnings()

@@ -24,6 +24,10 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
     * key -- The string identifying the token
     * user -- The user to which the token belongs
     """
+
+    class ErrorMessages:
+        NO_AUTH_HEADER_PRESENT = 'No Auth Header Present'
+
     cognito_enabled = auth_settings.COGNITO_ENABLED
     if not cognito_enabled:
         auth_token_model = auth_settings.get_auth_token_document()
@@ -54,9 +58,10 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
         if auth_settings.DISABLE_USER_AUTH:
             return AnonymousUser, None
 
-        # if specific API keys do not need user auth the bypass it
-        if api_key and auth_settings.BYPASS_USER_AUTH_API_KEY_NAMES and \
-                api_key.name in auth_settings.BYPASS_USER_AUTH_API_KEY_NAMES:
+        # if specific API keys do not need user auth then bypass it
+        bypass_user_auth_setting = auth_settings.BYPASS_USER_AUTH_API_KEY_NAMES and api_key.name in auth_settings.BYPASS_USER_AUTH_API_KEY_NAMES
+        bypass_user_auth_api_key = hasattr(api_key, 'bypass_user_auth') and getattr(api_key, 'bypass_user_auth', False)
+        if bypass_user_auth_setting or bypass_user_auth_api_key:
             return AnonymousUser, None
 
         # regular authentication
@@ -77,7 +82,7 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
             return self.authenticate_credentials(auth[1])
         else:
             if not auth_header:
-                raise exceptions.AuthenticationFailed('No Auth Header Present')
+                raise exceptions.AuthenticationFailed(self.ErrorMessages.NO_AUTH_HEADER_PRESENT)
             try:
                 cognito_client_id = get_client_id_from_access_token(auth_header)
             except (JWSError, JWTError) as ex:
@@ -156,7 +161,7 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
             raise exceptions.PermissionDenied(ErrorMessages.PERMISSION_DENIED + ' ' + ErrorMessages.REPLAY_ERROR)
 
         if auth_settings.MULTIPART_POST_URLS and url in auth_settings.MULTIPART_POST_URLS:
-            return
+            return token
 
         # if no nonce was passed in raise error
         if not nonce:
@@ -178,7 +183,10 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
 
     @staticmethod
     def validate_api_key(api_key, url, method, request):
-        if auth_settings.FULL_ACCESS_API_KEY_NAMES and api_key.name in auth_settings.FULL_ACCESS_API_KEY_NAMES:
+        full_access_settings = auth_settings.FULL_ACCESS_API_KEY_NAMES and \
+                               api_key.name in auth_settings.FULL_ACCESS_API_KEY_NAMES
+        full_access_api_key = hasattr(api_key, 'full_access') and getattr(api_key, 'full_access', False)
+        if full_access_settings or full_access_api_key:
             return True
 
         # check if we have permissions to this method
