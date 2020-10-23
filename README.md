@@ -3,6 +3,7 @@
 This adds signature authentication to Django / Rest Framework. In addition it provides an easy to use password reset module apart from Django's built in.
 
 ### Breaking Changes
+1.4.0.dev1 Moved full access key and bypass auth users to the database. You will need to update your models to utilize this. Older settings will still work. One requirement with this new build is to add API_ENDPOINT_MODEL to your settings for more streamlined testing.
 1.3.0.dev1 Migrated to DjangoTestCase under the hood so when moving to this version you'll need to revisit your tests
 1.2.0.de 1 When updating past this version you will be required to send in an APIRequetPermission model
 1.0.4.dev1 When updating past this version you will be required to install the following pip packages: python-jose
@@ -100,6 +101,10 @@ This is the model that is used to restrict and grant access to each individual e
 * api_endpoint: ForeignKey field to the ApiEndpoint model defined in relational.py
 * request_key: CharField containing the key in the request.data dictionary that you want to restrict access on
 * request_value: CharField containing the value in the request_key that you watn to restrict access on
+
+### API_ENDPOINT_MODEL
+This is the model that is used to link into the API_REQUEST_PERMISSION table that has the endpoint data. This was not used until version 1.4.0.
+* endpoint: Endpoint in the shortened django url form i.e. ^/users$ (can be a regex)
 
 
 ### DB_SETTINGS

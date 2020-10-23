@@ -21,6 +21,7 @@ DEFAULTS = {
     'APPLICATION_DOCUMENT': None,
     'API_PERMISSION_MODEL': None,
     'API_REQUEST_PERMISSION_MODEL': None,
+    'API_ENDPOINT_MODEL': None,
     'DB_SETTINGS': None,
     'SUPER_KEY_AUTH': None,
     'SUPER_KEY_HEADER': None,
@@ -52,6 +53,7 @@ class AuthSettings(object):
 
     required_settings = [
         'APPLICATION_DOCUMENT',
+        'API_ENDPOINT_MODEL',
         'API_PERMISSION_MODEL',
         'API_REQUEST_PERMISSION_MODEL',
         'DATABASE_ENGINE',
@@ -104,6 +106,15 @@ class AuthSettings(object):
         module = import_module(name[:dot])
         return getattr(module, name[dot + 1:])
 
+    def get_api_endpoint_document(self):
+        try:
+            name = self.user_settings['API_ENDPOINT_MODEL']
+        except KeyError:
+            name = self.defaults['API_ENDPOINT_MODEL']
+        dot = name.rindex('.')
+        module = import_module(name[:dot])
+        return getattr(module, name[dot + 1:])
+
     def get_api_permission_document(self):
         try:
             name = self.user_settings['API_PERMISSION_MODEL']
@@ -150,20 +161,8 @@ class AuthSettings(object):
                 raise InvalidAuthSettings(self.ErrorMessages.NOT_PROVIDED.format(required_setting))
 
         # ensure we have all the models we need
-        if 'USER_DOCUMENT' not in self.user_settings.keys():
-            raise InvalidAuthSettings(self.ErrorMessages.NOT_PROVIDED)
-
         if 'AUTH_TOKEN_DOCUMENT' not in self.user_settings.keys() and ('COGNITO_ENABLED' not in self.user_settings.keys() or self.user_settings['COGNITO_ENABLED'] is False):
-            raise InvalidAuthSettings(self.ErrorMessages.NOT_PROVIDED)
-
-        if 'APPLICATION_DOCUMENT' not in self.user_settings.keys():
-            raise InvalidAuthSettings(self.ErrorMessages.NOT_PROVIDED)
-
-        if 'API_PERMISSION_MODEL' not in self.user_settings.keys():
-            raise InvalidAuthSettings(self.ErrorMessages.NOT_PROVIDED)
-
-        if 'API_REQUEST_PERMISSION_MODEL' not in self.user_settings.keys():
-            raise InvalidAuthSettings(self.ErrorMessages.NOT_PROVIDED)
+            raise InvalidAuthSettings(self.ErrorMessages.NOT_PROVIDED.format('AUTH_TOKEN_DOCUMENT'))
 
         if 'DB_SETTINGS' in self.user_settings.keys() and self.user_settings['DB_SETTINGS']:
             # need to setup connection to mongo if db_engine is mongo
@@ -173,6 +172,7 @@ class AuthSettings(object):
                 connect(self.user_settings['DB_SETTINGS']['db'], **self.user_settings['DB_SETTINGS']['kwargs'])
 
         # todo: validate user model fields
+
 
 auth_settings = AuthSettings(USER_SETTINGS, DEFAULTS)
 

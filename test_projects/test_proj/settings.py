@@ -148,9 +148,11 @@ REST_FRAMEWORK_SIGNATURE = {
     'AUTH_TOKEN_DOCUMENT': 'test_projects.test_proj.test_app.models.AuthToken',
     'API_PERMISSION_MODEL': 'test_projects.test_proj.test_app.models.ApiPermission',
     'API_REQUEST_PERMISSION_MODEL': 'test_projects.test_proj.test_app.models.ApiRequestPermission',
+    'API_ENDPOINT_MODEL': 'test_projects.test_proj.test_app.models.ApiEndpoint',
     'BYPASS_URLS': [],
     'SSO_TOKEN_CLASSES': [],
     'FULL_ACCESS_API_KEY_NAMES': ['test-app'],
+    'BYPASS_USER_AUTH_API_KEY_NAMES': ['bypass_user_auth_key'],
     'MULTIPART_POST_URLS': [],
     'UNSECURED_URLS': []
 }

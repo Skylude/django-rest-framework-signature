@@ -8,6 +8,7 @@ from django.utils import timezone
 def generate_key():
     return str(uuid.uuid4())[:20]
 
+
 class ApiEndpoint(models.Model):
     id = models.AutoField(primary_key=True)
     endpoint = models.CharField(max_length=150, null=False, blank=False)
@@ -18,6 +19,8 @@ class ApiKey(models.Model):
     name = models.CharField(max_length=128)
     access_key = models.CharField(max_length=128, default=generate_key)
     secret_access_key = models.CharField(max_length=128, default=generate_key)
+    bypass_user_auth = models.BooleanField(default=False)
+    full_access = models.BooleanField(default=False)
     updated = models.DateTimeField(null=False, default=timezone.now)
     created = models.DateTimeField(null=False, default=timezone.now)
 

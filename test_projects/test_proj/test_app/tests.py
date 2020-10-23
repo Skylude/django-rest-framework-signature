@@ -1,90 +1,37 @@
 import binascii
-import bcrypt
-from datetime import timedelta
 import hashlib
 import os
-import unittest
-import unittest.mock
 import uuid
 
-from django.core.exceptions import ObjectDoesNotExist
+from datetime import timedelta
 from django.utils import timezone
-
-from rest_framework_signature.errors import ErrorMessages
-from rest_framework_signature.helpers import RestFrameworkSignatureTestClass, generate_email_address
-from rest_framework_signature.settings import auth_settings
-from rest_framework.test import APIClient
 from rest_framework import response, status
-
-from test_projects.test_proj.test_app.models import *
+from rest_framework_signature.authentication import TokenAuthentication
+from rest_framework_signature.errors import ErrorMessages
+from rest_framework_signature.helpers import RestFrameworkSignatureTestClass
+from rest_framework_signature.settings import auth_settings
+from unittest.mock import patch
 
 
 class AuthenticationTestsWithApiKeyWithNoPermissions(RestFrameworkSignatureTestClass):
     def setUp(self):
-        self.setup_client()
-        
         # create different token than default for no permissions
         access_key = str(uuid.uuid4())[:10]
         secret_access_key = str(uuid.uuid4())[:20]
-        device_token = self.application_model(
+        api_key = self.application_model(
             name=str(uuid.uuid4())[:15],
             access_key=access_key,
             secret_access_key=secret_access_key
         )
-        device_token.save()
-        self._device_token = device_token
+        api_key.save()
+        self.setup_client(api_key=api_key)
 
         # give this api key some permissions
         self.endpoint_with_access = '/users'
         self.endpoint_with_access_with_request_permissions = '/apiEndpoints'
-        try:
-            endpoint = ApiEndpoint.objects.get(endpoint=self.endpoint_with_access)
-        except ObjectDoesNotExist:
-            endpoint = ApiEndpoint(endpoint=self.endpoint_with_access)
-            endpoint.save()
-        api_permission = ApiPermission(api_endpoint=endpoint, methods='GET,PUT,POST', api_key=device_token)
-        api_permission.save()
 
-        try:
-            endpoint = ApiEndpoint.objects.get(endpoint=self.endpoint_with_access_with_request_permissions)
-        except ObjectDoesNotExist:
-            endpoint = ApiEndpoint(endpoint=self.endpoint_with_access_with_request_permissions)
-            endpoint.save()
-        api_permission = ApiPermission(api_endpoint=endpoint, methods='GET,PUT,POST', api_key=device_token)
-        api_permission.save()
-
-        try:
-            endpoint = ApiEndpoint.objects.get(endpoint=self.endpoint_with_access_with_request_permissions)
-        except ObjectDoesNotExist:
-            endpoint = ApiEndpoint(endpoint=self.endpoint_with_access_with_request_permissions)
-            endpoint.save()
-        self.api_request_permission_key = 'hello'
-        self.api_request_permission_value = 'world'
-        api_request_permission = ApiRequestPermission(api_key=device_token, api_endpoint=endpoint,
-                                                      request_key=self.api_request_permission_key,
-                                                      request_value=self.api_request_permission_value)
-        api_request_permission.save()
-
-    def test_get_endpoint_with_access(self):
-        url = self.endpoint_with_access
-        headers = self.get_headers(url)
-
-        # act
-        result = self.api_client.get(url, format='json', **headers)
-
-        # assert
-        self.assertEqual(result.status_code, status.HTTP_200_OK)
-
-    def test_get_endpoint_without_access(self):
-        url = '/apiKeys'
-        headers = self.get_headers(url)
-
-        # act
-        result = self.api_client.get(url, format='json', **headers)
-
-        # assert
-        self.assertEquals(result.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEquals(result.data['detail'], ErrorMessages.API_KEY_NOT_AUTHORIZED_FOR_ENDPOINT.format(url))
+        self.create_endpoint_with_access(self.endpoint_with_access)
+        self.create_endpoint_with_access_with_request_permissions(self.endpoint_with_access_with_request_permissions)
 
     def test_api_request_permission_with_permission_but_not_valid_key_returns_403(self):
         # arrange
@@ -120,9 +67,233 @@ class AuthenticationTestsWithApiKeyWithNoPermissions(RestFrameworkSignatureTestC
         result = self.api_client.post(url, body, format='json', **headers)
         self.assertEqual(result.status_code, 200)
 
+    def test_get_endpoint_with_access(self):
+        url = self.endpoint_with_access
+        headers = self.get_headers(url)
+
+        # act
+        result = self.api_client.get(url, format='json', **headers)
+
+        # assert
+        self.assertEqual(result.status_code, status.HTTP_200_OK)
+
+    def test_get_endpoint_without_access(self):
+        url = '/apiKeys'
+        headers = self.get_headers(url)
+
+        # act
+        result = self.api_client.get(url, format='json', **headers)
+
+        # assert
+        self.assertEquals(result.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEquals(result.data['detail'], ErrorMessages.API_KEY_NOT_AUTHORIZED_FOR_ENDPOINT.format(url))
+
+    def test_request_fails_without_auth_header_due_to_bypass_user_auth_not_in_settings(self):
+            # arrange
+            url = self.endpoint_with_access
+            headers = self.get_headers_without_auth(url)
+
+            # act
+            result = self.api_client.get(url, format='json', **headers)
+
+            # assert
+            self.assertEqual(result.status_code, status.HTTP_401_UNAUTHORIZED)
+            self.assertEqual(result.data['detail'], TokenAuthentication.ErrorMessages.NO_AUTH_HEADER_PRESENT)
+
+
+class AuthenticationTestsWithBypassAuthAPIKey(RestFrameworkSignatureTestClass):
+    def setUp(self):
+        # create different token than default for no permissions
+        access_key = str(uuid.uuid4())[:10]
+        secret_access_key = str(uuid.uuid4())[:20]
+        api_key = self.application_model(
+            name=str(uuid.uuid4())[:15],
+            access_key=access_key,
+            secret_access_key=secret_access_key,
+            bypass_user_auth=True
+        )
+        api_key.save()
+        self.setup_client(api_key=api_key)
+
+        # give this api key some permissions
+        self.endpoint_with_access = '/users'
+        self.endpoint_with_access_with_request_permissions = '/apiEndpoints'
+
+        self.create_endpoint_with_access(self.endpoint_with_access)
+        self.create_endpoint_with_access_with_request_permissions(self.endpoint_with_access_with_request_permissions)
+
+    def test_request_works_without_auth_header_due_to_bypass_user_auth_settings(self):
+        url = self.endpoint_with_access
+        headers = self.get_headers_without_auth(url)
+
+        # act
+        result = self.api_client.get(url, format='json', **headers)
+
+        # assert
+        self.assertEqual(result.status_code, status.HTTP_200_OK)
+
+
+class AuthenticationTestsWithBypassUserAuthInSettings(RestFrameworkSignatureTestClass):
+    def setUp(self):
+        # create different token than default for no permissions
+        access_key = str(uuid.uuid4())[:10]
+        secret_access_key = str(uuid.uuid4())[:20]
+        api_key = self.application_model(
+            name='bypass_user_auth_key',
+            access_key=access_key,
+            secret_access_key=secret_access_key
+        )
+        api_key.save()
+        self.setup_client(api_key=api_key)
+
+        # give this api key some permissions
+        self.endpoint_with_access = '/users'
+        self.endpoint_with_access_with_request_permissions = '/apiEndpoints'
+
+        self.create_endpoint_with_access(self.endpoint_with_access)
+        self.create_endpoint_with_access_with_request_permissions(self.endpoint_with_access_with_request_permissions)
+
+    def test_request_works_without_auth_header_due_to_bypass_user_auth_settings(self):
+            url = self.endpoint_with_access
+            headers = self.get_headers_without_auth(url)
+
+            # act
+            result = self.api_client.get(url, format='json', **headers)
+
+            # assert
+            self.assertEqual(result.status_code, status.HTTP_200_OK)
+
+
+class AuthenticationTestsWithFullAccessAPIKey(RestFrameworkSignatureTestClass):
+    def setUp(self):
+        # create different token than default for no permissions
+        access_key = str(uuid.uuid4())[:10]
+        secret_access_key = str(uuid.uuid4())[:20]
+        api_key = self.application_model(
+            name=str(uuid.uuid4())[:15],
+            access_key=access_key,
+            secret_access_key=secret_access_key,
+            full_access=True
+        )
+        api_key.save()
+        self.setup_client(api_key=api_key)
+
+    def test_get_endpoint_without_access_but_with_full_access_api_key_in_db_returns_200(self):
+        url = '/apiKeys'
+        headers = self.get_headers(url)
+
+        # act
+        result = self.api_client.get(url, format='json', **headers)
+
+        # assert
+        self.assertEquals(result.status_code, status.HTTP_200_OK)
+
 
 class AuthenticationTests(RestFrameworkSignatureTestClass):
+    # todo: sso test_projects
     user_model = auth_settings.get_user_document()
+
+    @patch('test_projects.test_proj.test_app.views.UserHandler.get')
+    def test_add_api_key_id_to_request(self, mock_get):
+        mock_get.return_value = response.Response({}, status=status.HTTP_200_OK)
+        url = '/users'
+        headers = self.get_headers(url)
+        result = self.api_client.get(url, **headers)
+
+        # asserts
+        self.assertEqual(result.status_code, 200)
+        self.assertTrue(mock_get.called)
+        first_call = mock_get.call_args_list[0]
+        request_arg = first_call[0][0]
+        self.assertEqual(request_arg.api_key_id, self.device_token.id)
+
+    def test_get_endpoint_without_access_but_with_full_access_api_key_in_settings_returns_200(self):
+        url = '/apiKeys'
+        headers = self.get_headers(url)
+
+        # act
+        result = self.api_client.get(url, format='json', **headers)
+
+        # assert
+        self.assertEquals(result.status_code, status.HTTP_200_OK)
+
+    def test_incorrect_api_key_returns_invalid_api_key_error(self):
+        url = '/users'
+        result = self.api_client.get(url)
+        self.assertEqual(result.status_code, 403)
+        self.assertEqual(result.data['detail'],
+                         '{0} {1}'.format(ErrorMessages.PERMISSION_DENIED, ErrorMessages.MISSING_API_KEY))
+
+    def test_invalid_nonce_returns_invalid_nonce_error(self):
+        url = '/users'
+        headers = self.get_headers(url, {})
+        headers[auth_settings.NONCE_HEADER] = 'garbagio'
+        result = self.api_client.get(url, **headers)
+        self.assertEqual(result.status_code, 403)
+        self.assertEqual(result.data['detail'],
+                         '{0} {1}'.format(ErrorMessages.PERMISSION_DENIED, ErrorMessages.INVALID_NONCE))
+
+    def test_no_nonce_returns_missing_nonce_error(self):
+        url = '/users'
+        body = {
+            'garbage': 'collector'
+        }
+        headers = self.get_headers(url)
+        del headers[auth_settings.NONCE_HEADER]
+        result = self.api_client.get(url, body, **headers)
+        self.assertEqual(result.status_code, 403)
+        self.assertEqual(result.data['detail'],
+                         '{0} {1}'.format(ErrorMessages.PERMISSION_DENIED, ErrorMessages.MISSING_NONCE))
+
+    def test_multi_filters_url_escaping(self):
+        # arrange
+        url = '/users?filters=client_id=1|is_active=True&include=report'
+        headers = self.get_headers(url)
+
+        # act
+        result = self.api_client.get(url, format='json', **headers)
+
+        # assert
+        self.assertEqual(result.status_code, status.HTTP_200_OK)
+
+    def test_post_check_reset_password_link(self):
+        self.user.password_reset_token = binascii.hexlify(os.urandom(22)).decode()
+        self.user.password_reset_token_created = timezone.now()
+        self.user.password_reset_token_expires = timezone.now() + timedelta(hours=1)
+        self.user.save()
+        url = '/auth/check_password_reset_link'
+        body = {'reset_token': self.user.password_reset_token}
+        headers = self.get_headers_without_auth(url, body)
+        result = self.api_client.post(url, body, format='json', **headers)
+        self.assertEqual(result.status_code, 200)
+
+    def test_post_check_reset_password_link_expired_token(self):
+        self.user.password_reset_token = binascii.hexlify(os.urandom(22)).decode()
+        self.user.password_reset_token_created = timezone.now()
+        self.user.password_reset_token_expires = timezone.now() - timedelta(hours=3)
+        self.user.save()
+        url = '/auth/check_password_reset_link'
+        body = {'reset_token': self.user.password_reset_token}
+        headers = self.get_headers_without_auth(url, body)
+        result = self.api_client.post(url, body, format='json', **headers)
+        self.assertEqual(result.status_code, 400)
+        self.assertEqual(result.data['error_message'], ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
+
+    def test_post_check_reset_password_link_invalid_reset_token(self):
+        url = '/auth/check_password_reset_link'
+        body = {'reset_token': '12315sdf'}
+        headers = self.get_headers_without_auth(url, body)
+        result = self.api_client.post(url, body, format='json', **headers)
+        self.assertEqual(result.status_code, 400)
+        self.assertEqual(result.data['error_message'], ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
+
+    def test_post_check_reset_password_link_no_reset_token(self):
+        url = '/auth/check_password_reset_link'
+        body = {}
+        headers = self.get_headers_without_auth(url, body)
+        result = self.api_client.post(url, body, format='json', **headers)
+        self.assertEqual(result.status_code, 400)
+        self.assertEqual(result.data['error_message'], ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
 
     def test_post_login(self):
         url = '/auth/login'
@@ -133,16 +304,77 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         result = self.api_client.post(url, body, format='json')
         self.assertEqual(result.status_code, 200)
 
-    # todo: sso test_projects
-    #def test_post_login_sso(self):
-    #    rent_plus_login_token = DataGenerator.set_up_rent_plus_login_token(api_key=self.device_token,
-    #                                                                       user=self.user)
-    #    url = '/auth/sso_login'
-    #    body = {
-    #        'sso_token': rent_plus_login_token.token
-    #    }
-    #    result = self.api_client.post(url, body, format='json')
-    #    self.assertEqual(result.status_code, 200)
+    def test_post_login_with_correct_password_clears_failed_login_attempts(self):
+        url = '/auth/login'
+        body = {
+            'username': self.user.username,
+            'password': 'wrong'
+        }
+        self.api_client.post(url, body, format='json')
+        url = '/auth/login'
+        body = {
+            'username': self.user.username,
+            'password': self.sha1_password
+        }
+        result = self.api_client.post(url, body, format='json')
+        self.assertEqual(result.status_code, 200)
+        user = self.user_model.objects.get(username=self.user.username)
+        self.assertEqual(user.failed_login_attempts, 0)
+
+    def test_post_login_with_correct_password_clears_last_failed_login(self):
+        url = '/auth/login'
+        body = {
+            'username': self.user.username,
+            'password': 'wrong'
+        }
+        self.api_client.post(url, body, format='json')
+        url = '/auth/login'
+        body = {
+            'username': self.user.username,
+            'password': self.sha1_password
+        }
+        result = self.api_client.post(url, body, format='json')
+        self.assertEqual(result.status_code, 200)
+        user = self.user_model.objects.get(username=self.user.username)
+        self.assertIsNone(user.last_failed_login)
+
+    def test_post_login_with_incorrect_password_20_times_locks_account(self):
+        url = '/auth/login'
+        body = {
+            'username': self.user.username,
+            'password': 'wrong'
+        }
+        for x in range(20):
+            result = self.api_client.post(url, body, format='json')
+        self.assertEqual(result.status_code, 400)
+        data = result.data
+        self.assertEqual(data['error_message'], ErrorMessages.TOO_MANY_INCORRECT_LOGIN_ATTEMPTS)
+
+    def test_post_login_with_incorrect_password_updates_failed_login_attempts(self):
+        url = '/auth/login'
+        body = {
+            'username': self.user.username,
+            'password': 'wrong'
+        }
+        result = self.api_client.post(url, body, format='json')
+        self.assertEqual(result.status_code, 400)
+        data = result.data
+        self.assertEqual(data['error_message'], ErrorMessages.INVALID_CREDENTIALS)
+        user = self.user_model.objects.get(username=self.user.username)
+        self.assertEqual(user.failed_login_attempts, 1)
+
+    def test_post_login_with_incorrect_password_updates_last_failed_login(self):
+        url = '/auth/login'
+        body = {
+            'username': self.user.username,
+            'password': 'wrong'
+        }
+        result = self.api_client.post(url, body, format='json')
+        self.assertEqual(result.status_code, 400)
+        data = result.data
+        self.assertEqual(data['error_message'], ErrorMessages.INVALID_CREDENTIALS)
+        user = self.user_model.objects.get(username=self.user.username)
+        self.assertIsNotNone(user.last_failed_login)
 
     def test_post_login_with_incorrect_username(self):
         url = '/auth/login'
@@ -169,14 +401,6 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         result = self.api_client.post(url, format='json', **headers)
         self.assertEqual(result.status_code, 204)
 
-    def test_post_reset_password_no_username(self):
-        url = '/auth/reset_password'
-        body = {}
-        headers = self.get_headers_without_auth(url, body)
-        result = self.api_client.post(url, body, format='json', **headers)
-        self.assertEqual(result.status_code, 400)
-        self.assertEqual(result.data['error_message'], ErrorMessages.MISSING_USERNAME)
-
     def test_post_reset_password_invalid_username(self):
         url = '/auth/reset_password'
         body = {'username': 'doesnotexist@test.com'}
@@ -184,6 +408,14 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         result = self.api_client.post(url, body, format='json', **headers)
         self.assertEqual(result.status_code, 400)
         self.assertEqual(result.data['error_message'], ErrorMessages.INVALID_USERNAME)
+
+    def test_post_reset_password_no_username(self):
+        url = '/auth/reset_password'
+        body = {}
+        headers = self.get_headers_without_auth(url, body)
+        result = self.api_client.post(url, body, format='json', **headers)
+        self.assertEqual(result.status_code, 400)
+        self.assertEqual(result.data['error_message'], ErrorMessages.MISSING_USERNAME)
 
     def test_post_reset_password_sets_reset_password_token(self):
         url = '/auth/reset_password'
@@ -194,45 +426,6 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         user = self.user_model.objects.get(username=self.user.username)
         self.assertIsNotNone(user.password_reset_token)
         self.assertIsNotNone(user.password_reset_token_created)
-
-    def test_post_check_reset_password_link_no_reset_token(self):
-        url = '/auth/check_password_reset_link'
-        body = {}
-        headers = self.get_headers_without_auth(url, body)
-        result = self.api_client.post(url, body, format='json', **headers)
-        self.assertEqual(result.status_code, 400)
-        self.assertEqual(result.data['error_message'], ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
-
-    def test_post_check_reset_password_link_invalid_reset_token(self):
-        url = '/auth/check_password_reset_link'
-        body = {'reset_token': '12315sdf'}
-        headers = self.get_headers_without_auth(url, body)
-        result = self.api_client.post(url, body, format='json', **headers)
-        self.assertEqual(result.status_code, 400)
-        self.assertEqual(result.data['error_message'], ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
-
-    def test_post_check_reset_password_link_expired_token(self):
-        self.user.password_reset_token = binascii.hexlify(os.urandom(22)).decode()
-        self.user.password_reset_token_created = timezone.now()
-        self.user.password_reset_token_expires = timezone.now() - timedelta(hours=3)
-        self.user.save()
-        url = '/auth/check_password_reset_link'
-        body = {'reset_token': self.user.password_reset_token}
-        headers = self.get_headers_without_auth(url, body)
-        result = self.api_client.post(url, body, format='json', **headers)
-        self.assertEqual(result.status_code, 400)
-        self.assertEqual(result.data['error_message'], ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
-
-    def test_post_check_reset_password_link(self):
-        self.user.password_reset_token = binascii.hexlify(os.urandom(22)).decode()
-        self.user.password_reset_token_created = timezone.now()
-        self.user.password_reset_token_expires = timezone.now() + timedelta(hours=1)
-        self.user.save()
-        url = '/auth/check_password_reset_link'
-        body = {'reset_token': self.user.password_reset_token}
-        headers = self.get_headers_without_auth(url, body)
-        result = self.api_client.post(url, body, format='json', **headers)
-        self.assertEqual(result.status_code, 200)
 
     def test_post_submit_new_password_no_reset_token(self):
         url = '/auth/submit_new_password'
@@ -294,128 +487,3 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
             m.update(self.user.salt.encode('utf-8'))
         expected_password = m.hexdigest()
         self.assertEqual(expected_password, user.password)
-
-    def test_post_login_with_incorrect_password_updates_failed_login_attempts(self):
-        url = '/auth/login'
-        body = {
-            'username': self.user.username,
-            'password': 'wrong'
-        }
-        result = self.api_client.post(url, body, format='json')
-        self.assertEqual(result.status_code, 400)
-        data = result.data
-        self.assertEqual(data['error_message'], ErrorMessages.INVALID_CREDENTIALS)
-        user = self.user_model.objects.get(username=self.user.username)
-        self.assertEqual(user.failed_login_attempts, 1)
-
-    def test_post_login_with_incorrect_password_updates_last_failed_login(self):
-        url = '/auth/login'
-        body = {
-            'username': self.user.username,
-            'password': 'wrong'
-        }
-        result = self.api_client.post(url, body, format='json')
-        self.assertEqual(result.status_code, 400)
-        data = result.data
-        self.assertEqual(data['error_message'], ErrorMessages.INVALID_CREDENTIALS)
-        user = self.user_model.objects.get(username=self.user.username)
-        self.assertIsNotNone(user.last_failed_login)
-
-    def test_post_login_with_incorrect_password_20_times_locks_account(self):
-        url = '/auth/login'
-        body = {
-            'username': self.user.username,
-            'password': 'wrong'
-        }
-        for x in range(20):
-            result = self.api_client.post(url, body, format='json')
-        self.assertEqual(result.status_code, 400)
-        data = result.data
-        self.assertEqual(data['error_message'], ErrorMessages.TOO_MANY_INCORRECT_LOGIN_ATTEMPTS)
-
-    def test_post_login_with_correct_password_clears_last_failed_login(self):
-        url = '/auth/login'
-        body = {
-            'username': self.user.username,
-            'password': 'wrong'
-        }
-        self.api_client.post(url, body, format='json')
-        url = '/auth/login'
-        body = {
-            'username': self.user.username,
-            'password': self.sha1_password
-        }
-        result = self.api_client.post(url, body, format='json')
-        self.assertEqual(result.status_code, 200)
-        user = self.user_model.objects.get(username=self.user.username)
-        self.assertIsNone(user.last_failed_login)
-
-    def test_post_login_with_correct_password_clears_failed_login_attempts(self):
-        url = '/auth/login'
-        body = {
-            'username': self.user.username,
-            'password': 'wrong'
-        }
-        self.api_client.post(url, body, format='json')
-        url = '/auth/login'
-        body = {
-            'username': self.user.username,
-            'password': self.sha1_password
-        }
-        result = self.api_client.post(url, body, format='json')
-        self.assertEqual(result.status_code, 200)
-        user = self.user_model.objects.get(username=self.user.username)
-        self.assertEqual(user.failed_login_attempts, 0)
-
-    def test_incorrect_api_key_returns_invalid_api_key_error(self):
-        url = '/users'
-        result = self.api_client.get(url)
-        self.assertEqual(result.status_code, 403)
-        self.assertEqual(result.data['detail'],
-                         '{0} {1}'.format(ErrorMessages.PERMISSION_DENIED, ErrorMessages.MISSING_API_KEY))
-
-    def test_invalid_nonce_returns_invalid_nonce_error(self):
-        url = '/users'
-        headers = self.get_headers(url, {})
-        headers[auth_settings.NONCE_HEADER] = 'garbagio'
-        result = self.api_client.get(url, **headers)
-        self.assertEqual(result.status_code, 403)
-        self.assertEqual(result.data['detail'],
-                         '{0} {1}'.format(ErrorMessages.PERMISSION_DENIED, ErrorMessages.INVALID_NONCE))
-
-    def test_no_nonce_returns_missing_nonce_error(self):
-        url = '/users'
-        body = {
-            'garbage': 'collector'
-        }
-        headers = self.get_headers(url)
-        del headers[auth_settings.NONCE_HEADER]
-        result = self.api_client.get(url, body, **headers)
-        self.assertEqual(result.status_code, 403)
-        self.assertEqual(result.data['detail'],
-                         '{0} {1}'.format(ErrorMessages.PERMISSION_DENIED, ErrorMessages.MISSING_NONCE))
-
-    @unittest.mock.patch('test_projects.test_proj.test_app.views.UserHandler.get')
-    def test_add_api_key_id_to_request(self, mock_get):
-        mock_get.return_value = response.Response({}, status=status.HTTP_200_OK)
-        url = '/users'
-        headers = self.get_headers(url)
-        result = self.api_client.get(url, **headers)
-
-        # asserts
-        self.assertEqual(result.status_code, 200)
-        self.assertTrue(mock_get.called)
-        first_call = mock_get.call_args_list[0]
-        request_arg = first_call[0][0]
-        self.assertEqual(request_arg.api_key_id, self.device_token.id)
-
-    def test_multi_filters_url_escaping(self):
-        # arrange
-        url = '/users?filters=client_id=1|is_active=True&include=report'
-        headers = self.get_headers(url)
-
-        # act
-        result = self.api_client.get(url, format='json', **headers)
-
-        # assert
-        self.assertEqual(result.status_code, status.HTTP_200_OK)
