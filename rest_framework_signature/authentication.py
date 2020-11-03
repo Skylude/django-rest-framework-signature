@@ -135,6 +135,7 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
         url = uri_to_iri(request.get_full_path())
         # Un-escape the pipe character, for the url nonce calculation specifically
         url = url.replace('%7C', '|')
+        url = url.replace('%20', ' ')
 
         # if no api key was passed in raise error
         if not api_key:
