@@ -194,13 +194,6 @@ class AuthenticationTestsWithFullAccessAPIKey(RestFrameworkSignatureTestClass):
 class AuthenticationTests(RestFrameworkSignatureTestClass):
     user_model = auth_settings.get_user_document()
 
-    @staticmethod
-    def failed_token_lookup(*_args, **kwargs):
-        raise ObjectDoesNotExist
-
-    @staticmethod
-    def successful_token_lookup(user, token, *_args, **_kwargs):
-        return SimpleNamespace(user=user, token=token)
 
     @staticmethod
     def generate_token_class(user=None, token=None, lookup=None):
@@ -215,13 +208,19 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
 
     @staticmethod
     def generate_failed_lookup_class():
-        return AuthenticationTests.generate_token_class(lookup=AuthenticationTests.failed_token_lookup)
+        def failed_token_lookup(*_args, **kwargs):
+            raise ObjectDoesNotExist
+
+        return AuthenticationTests.generate_token_class(lookup=failed_token_lookup)
 
     @staticmethod
     def generate_successful_lookup_class(user, token=''):
+        def successful_token_lookup(user, token, *_args, **_kwargs):
+            return SimpleNamespace(user=user, token=token)
+
         return AuthenticationTests.generate_token_class(
             user=user, token=token,
-            lookup=AuthenticationTests.successful_token_lookup,
+            lookup=successful_token_lookup,
         )
 
     @patch('rest_framework_signature.settings.auth_settings.get_sso_token_classes')
