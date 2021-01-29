@@ -2,8 +2,10 @@ import binascii
 import hashlib
 import os
 import uuid
+from types import SimpleNamespace
 
 from datetime import timedelta
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from rest_framework import response, status
 from rest_framework_signature.authentication import TokenAuthentication
@@ -89,16 +91,16 @@ class AuthenticationTestsWithApiKeyWithNoPermissions(RestFrameworkSignatureTestC
         self.assertEquals(result.data['detail'], ErrorMessages.API_KEY_NOT_AUTHORIZED_FOR_ENDPOINT.format(url))
 
     def test_request_fails_without_auth_header_due_to_bypass_user_auth_not_in_settings(self):
-            # arrange
-            url = self.endpoint_with_access
-            headers = self.get_headers_without_auth(url)
+        # arrange
+        url = self.endpoint_with_access
+        headers = self.get_headers_without_auth(url)
 
-            # act
-            result = self.api_client.get(url, format='json', **headers)
+        # act
+        result = self.api_client.get(url, format='json', **headers)
 
-            # assert
-            self.assertEqual(result.status_code, status.HTTP_401_UNAUTHORIZED)
-            self.assertEqual(result.data['detail'], TokenAuthentication.ErrorMessages.NO_AUTH_HEADER_PRESENT)
+        # assert
+        self.assertEqual(result.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(result.data['detail'], TokenAuthentication.ErrorMessages.NO_AUTH_HEADER_PRESENT)
 
 
 class AuthenticationTestsWithBypassAuthAPIKey(RestFrameworkSignatureTestClass):
@@ -190,8 +192,89 @@ class AuthenticationTestsWithFullAccessAPIKey(RestFrameworkSignatureTestClass):
 
 
 class AuthenticationTests(RestFrameworkSignatureTestClass):
-    # todo: sso test_projects
     user_model = auth_settings.get_user_document()
+
+
+    @staticmethod
+    def generate_token_class(user=None, token=None, lookup=None):
+        class TokenClass:
+            class objects:
+                pass
+
+        token_class = TokenClass()
+        token_class.objects.get = lambda *_args, **_kwargs: lookup(user, token)
+
+        return token_class
+
+    @staticmethod
+    def generate_failed_lookup_class():
+        def failed_token_lookup(*_args, **kwargs):
+            raise ObjectDoesNotExist
+
+        return AuthenticationTests.generate_token_class(lookup=failed_token_lookup)
+
+    @staticmethod
+    def generate_successful_lookup_class(user, token=''):
+        def successful_token_lookup(user, token, *_args, **_kwargs):
+            return SimpleNamespace(user=user, token=token)
+
+        return AuthenticationTests.generate_token_class(
+            user=user, token=token,
+            lookup=successful_token_lookup,
+        )
+
+    @patch('rest_framework_signature.settings.auth_settings.get_sso_token_classes')
+    def test_sso_login_with_multiple_token_classes_succeeds_after_fails(self, mock_sso_classes):
+        # arrange
+        user = self.user_model.objects.get(username=self.user.username)
+
+        mock_sso_classes.return_value = [
+            self.generate_failed_lookup_class(),
+            self.generate_successful_lookup_class(user=user),
+        ]
+
+        url = '/auth/sso_login'
+        body = {}
+        headers = self.get_headers(url)
+
+        # act
+        result = self.api_client.post(url, body, **headers)
+
+        # assert
+        self.assertEquals(result.status_code, status.HTTP_200_OK)
+
+    @patch('rest_framework_signature.settings.auth_settings.get_sso_token_classes')
+    def test_sso_login_with_multiple_token_classes_fails(self, mock_sso_classes):
+        # arrange
+        mock_sso_classes.return_value = [
+            self.generate_failed_lookup_class()
+            for _ in range(3)
+        ]
+
+        url = '/auth/sso_login'
+        body = { }
+        headers = self.get_headers(url)
+
+        # act
+        result = self.api_client.post(url, body, **headers)
+
+        # assert
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch('rest_framework_signature.settings.auth_settings.get_sso_token_classes')
+    def test_sso_login_fails_with_no_(self, mock_sso_classes):
+        # arrange
+        mock_sso_classes.return_value = None
+
+        url = '/auth/sso_login'
+        body = { }
+        headers = self.get_headers(url)
+
+        # act
+        result = self.api_client.post(url, body, **headers)
+
+        # assert
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
 
     @patch('test_projects.test_proj.test_app.views.UserHandler.get')
     def test_add_api_key_id_to_request(self, mock_get):
