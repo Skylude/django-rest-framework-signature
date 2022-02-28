@@ -62,9 +62,11 @@ jobs:
       # deploy to pypi
       - deploy:
           name: PyPi Deploy
+          # upgrade pip to successfully install cryptography package
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
               sudo pip install twine
+              sudo pip install --upgrade pip
               python setup.py sdist
               twine upload --username "${PYPI_USERNAME}" --password "${PYPI_PASSWORD}" dist/*
             fi
