@@ -63,7 +63,6 @@ class SSOTokenSerializer(serializers.Serializer):
     friendly_error_message = None
 
     def validate(self, attrs):
-        # todo : check expiration on sso
         sso_token = attrs.get('sso_token')
         sso_token_classes = auth_settings.get_sso_token_classes()
         if not sso_token_classes:
@@ -72,7 +71,10 @@ class SSOTokenSerializer(serializers.Serializer):
 
         for sso_token_class in sso_token_classes:
             try:
-                sso_token_obj = sso_token_class.objects.get(token=sso_token)
+                sso_token_obj = sso_token_class.objects.get(
+                    token=sso_token,
+                    expires__gte=timezone.now(),
+                )
                 attrs['user'] = sso_token_obj.user
                 return attrs
             except ObjectDoesNotExist:
