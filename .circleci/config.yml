@@ -16,6 +16,10 @@ jobs:
     steps:
       - checkout
 
+      - run:
+          name: update apt-get
+          command: |
+            sudo apt-get update
       # need to install pyodbc dependency
       - run:
           name: pyodbc dependency
