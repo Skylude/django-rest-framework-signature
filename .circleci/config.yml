@@ -6,8 +6,8 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: circleci/python:3.6.5
-      - image: circleci/postgres:9.6.2
+      - image: cimg/python:3.6.9
+      - image: cimg/postgres:9.6.24
         environment:
           POSTGRES_USER=test
 
@@ -16,6 +16,10 @@ jobs:
     steps:
       - checkout
 
+      - run:
+          name: update apt-get
+          command: |
+            sudo apt-get update
       # need to install pyodbc dependency
       - run:
           name: pyodbc dependency
@@ -65,8 +69,8 @@ jobs:
           # upgrade pip to successfully install cryptography package
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              sudo pip install --upgrade pip
-              sudo pip install twine
+              pip install --upgrade pip
+              pip install twine
               python setup.py sdist
               twine upload --username "${PYPI_USERNAME}" --password "${PYPI_PASSWORD}" dist/*
             fi
