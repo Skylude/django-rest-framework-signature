@@ -14,6 +14,8 @@ from rest_framework_signature.helpers import RestFrameworkSignatureTestClass
 from rest_framework_signature.settings import auth_settings
 from unittest.mock import patch
 
+from test_projects.test_proj.test_app.models import SSOTokenTwo
+
 
 class AuthenticationTestsWithApiKeyWithNoPermissions(RestFrameworkSignatureTestClass):
     def setUp(self):
@@ -194,47 +196,13 @@ class AuthenticationTestsWithFullAccessAPIKey(RestFrameworkSignatureTestClass):
 class AuthenticationTests(RestFrameworkSignatureTestClass):
     user_model = auth_settings.get_user_document()
 
-
-    @staticmethod
-    def generate_token_class(user=None, token=None, lookup=None):
-        class TokenClass:
-            class objects:
-                pass
-
-        token_class = TokenClass()
-        token_class.objects.get = lambda *_args, **_kwargs: lookup(user, token)
-
-        return token_class
-
-    @staticmethod
-    def generate_failed_lookup_class():
-        def failed_token_lookup(*_args, **kwargs):
-            raise ObjectDoesNotExist
-
-        return AuthenticationTests.generate_token_class(lookup=failed_token_lookup)
-
-    @staticmethod
-    def generate_successful_lookup_class(user, token=''):
-        def successful_token_lookup(user, token, *_args, **_kwargs):
-            return SimpleNamespace(user=user, token=token)
-
-        return AuthenticationTests.generate_token_class(
-            user=user, token=token,
-            lookup=successful_token_lookup,
-        )
-
-    @patch('rest_framework_signature.settings.auth_settings.get_sso_token_classes')
-    def test_sso_login_with_multiple_token_classes_succeeds_after_fails(self, mock_sso_classes):
+    def test_sso_login_with_multiple_token_classes_succeeds_after_fails(self):
         # arrange
         user = self.user_model.objects.get(username=self.user.username)
-
-        mock_sso_classes.return_value = [
-            self.generate_failed_lookup_class(),
-            self.generate_successful_lookup_class(user=user),
-        ]
+        token = SSOTokenTwo.objects.create(user=user)
 
         url = '/auth/sso_login'
-        body = {}
+        body = { 'sso_token': token.token }
         headers = self.get_headers(url)
 
         # act
@@ -243,13 +211,8 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         # assert
         self.assertEquals(result.status_code, status.HTTP_200_OK)
 
-    @patch('rest_framework_signature.settings.auth_settings.get_sso_token_classes')
-    def test_sso_login_with_multiple_token_classes_fails(self, mock_sso_classes):
+    def test_sso_login_with_multiple_token_classes_fails(self):
         # arrange
-        mock_sso_classes.return_value = [
-            self.generate_failed_lookup_class()
-            for _ in range(3)
-        ]
 
         url = '/auth/sso_login'
         body = { }
