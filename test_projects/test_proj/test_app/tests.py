@@ -14,7 +14,7 @@ from rest_framework_signature.helpers import RestFrameworkSignatureTestClass
 from rest_framework_signature.settings import auth_settings
 from unittest.mock import patch
 
-from test_projects.test_proj.test_app.models import SSOTokenTwo
+from test_projects.test_proj.test_app.models import SSOToken, SSOTokenTwo
 
 
 class AuthenticationTestsWithApiKeyWithNoPermissions(RestFrameworkSignatureTestClass):
@@ -211,9 +211,25 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         # assert
         self.assertEquals(result.status_code, status.HTTP_200_OK)
 
+    def test_sso_login_with_expiration(self):
+        # arrange
+        user = self.user_model.objects.get(username=self.user.username)
+        token = SSOToken.objects.create(
+            user=user,
+            expires=(timezone.now() - timezone.timedelta(seconds=20)),
+        )
+        url = '/auth/sso_login'
+        body = { 'sso_token': token.token }
+        headers = self.get_headers(url)
+
+        # act
+        result = self.api_client.post(url, body, **headers)
+
+        # assert
+        self.assertEquals(result.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_sso_login_with_multiple_token_classes_fails(self):
         # arrange
-
         url = '/auth/sso_login'
         body = { }
         headers = self.get_headers(url)
