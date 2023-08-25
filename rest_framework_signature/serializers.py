@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import authenticate
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.utils import timezone
 from rest_framework_signature.settings import auth_settings
 from rest_framework import exceptions, serializers
@@ -63,7 +63,6 @@ class SSOTokenSerializer(serializers.Serializer):
     friendly_error_message = None
 
     def validate(self, attrs):
-        # todo : check expiration on sso
         sso_token = attrs.get('sso_token')
         sso_token_classes = auth_settings.get_sso_token_classes()
         if not sso_token_classes:
@@ -71,8 +70,16 @@ class SSOTokenSerializer(serializers.Serializer):
             raise exceptions.ValidationError(self.friendly_error_message)
 
         for sso_token_class in sso_token_classes:
+            filters = {
+                'token': sso_token,
+            }
             try:
-                sso_token_obj = sso_token_class.objects.get(token=sso_token)
+                sso_token_class._meta.get_field('expires')
+                filters['expires__gte'] = timezone.now()
+            except FieldDoesNotExist:
+                pass
+            try:
+                sso_token_obj = sso_token_class.objects.get(**filters)
                 attrs['user'] = sso_token_obj.user
                 return attrs
             except ObjectDoesNotExist:

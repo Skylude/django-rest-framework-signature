@@ -31,7 +31,6 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -150,7 +149,10 @@ REST_FRAMEWORK_SIGNATURE = {
     'API_REQUEST_PERMISSION_MODEL': 'test_projects.test_proj.test_app.models.ApiRequestPermission',
     'API_ENDPOINT_MODEL': 'test_projects.test_proj.test_app.models.ApiEndpoint',
     'BYPASS_URLS': [],
-    'SSO_TOKEN_CLASSES': [],
+    'SSO_TOKEN_CLASSES': [
+        'test_projects.test_proj.test_app.models.SSOToken',
+        'test_projects.test_proj.test_app.models.SSOTokenTwo',
+    ],
     'FULL_ACCESS_API_KEY_NAMES': ['test-app'],
     'BYPASS_USER_AUTH_API_KEY_NAMES': ['bypass_user_auth_key'],
     'MULTIPART_POST_URLS': [],
