@@ -17,15 +17,11 @@ To run tests in test projects:
 ```
 cd test_projects/test_proj
 python manage.py test test_projects.test_proj.test_app
-
-cd test_projects/test_cognito_proj
-python manage.py test test_projects.test_cognito_proj.test_cognito_app
 ```
 
 If you want to run tests from the root project directory, you can use the following commands:
 
 ```bash
-python -m unittest discover -s test_projects/test_cognito_proj/ -p '*tests.py'
 python -m unittest discover -s test_projects/test_proj/ -p '*tests.py'
 python -m unittest discover -s rest_framework_signature/ -p '*tests.py'
 ```
@@ -33,14 +29,10 @@ python -m unittest discover -s rest_framework_signature/ -p '*tests.py'
 ### Run tests without manage.py
 If you are debugging or running them without manage.py you need to create the databases:
  * drfsig for test_proj
- * drfsig_cognito for test_cognito_proj
 
 You then need to run migrations
 ```
 cd test_projects/test_proj
-python manage.py migrate
-
-cd test_projects/test_cognito_proj
 python manage.py migrate
 ```
 

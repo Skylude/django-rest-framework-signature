@@ -84,7 +84,7 @@ DATABASES = {
         'USER': 'test',
         'PASSWORD': 'test',
         'HOST': 'localhost',
-        'PORT': ''
+        'PORT': '5432'
     }
 }
 
@@ -160,4 +160,4 @@ REST_FRAMEWORK_SIGNATURE = {
 }
 
 # set test runner to nose
-TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+# TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
