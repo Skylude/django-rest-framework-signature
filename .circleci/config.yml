@@ -51,15 +51,15 @@ jobs:
             mkdir xunit
             . venv/bin/activate
             cd test_projects/test_proj
-            python manage.py test --with-xunit --xunit-file=../../xunit/xunit-test_proj.xml
+            python manage.py test
 
       # store test results
-      - store_test_results:
-          path: ./xunit
+      # - store_test_results:
+      #     path: ./xunit
 
       # store xml test artifacts
-      - store_artifacts:
-          path: ./xunit
+      # - store_artifacts:
+      #     path: ./xunit
 
       # deploy to pypi
       - deploy:
