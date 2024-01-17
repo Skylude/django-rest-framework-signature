@@ -7,7 +7,7 @@ jobs:
   build:
     docker:
       - image: cimg/python:3.11.2
-      - image: cimg/postgres:12
+      - image: cimg/postgres:12.8
         environment:
           POSTGRES_USER=test
 
