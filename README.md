@@ -3,6 +3,7 @@
 This adds signature authentication to Django / Rest Framework. In addition it provides an easy to use password reset module apart from Django's built in.
 
 ### Breaking Changes
+4.0.0.dev1 Migrated the project for Django 4.2 and newer
 1.4.0.dev1 Moved full access key and bypass auth users to the database. You will need to update your models to utilize this. Older settings will still work. One requirement with this new build is to add API_ENDPOINT_MODEL to your settings for more streamlined testing.
 1.3.0.dev1 Migrated to DjangoTestCase under the hood so when moving to this version you'll need to revisit your tests
 1.2.0.de 1 When updating past this version you will be required to send in an APIRequetPermission model
