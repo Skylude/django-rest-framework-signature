@@ -53,14 +53,6 @@ jobs:
             cd test_projects/test_proj
             python manage.py test
 
-      # store test results
-      # - store_test_results:
-      #     path: ./xunit
-
-      # store xml test artifacts
-      # - store_artifacts:
-      #     path: ./xunit
-
       # deploy to pypi
       - deploy:
           name: PyPi Deploy
