@@ -322,7 +322,7 @@ class RestFrameworkSignatureTransactionTestClass(TransactionTestCase):
         test_user = self.user_model(
             username=username,
             password=password,
-            salt=salt
+            salt=salt.decode('utf-8')
         )
         test_user.save()
         # create an authentication token
