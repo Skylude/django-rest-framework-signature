@@ -10,9 +10,6 @@ USER_SETTINGS = getattr(settings, 'REST_FRAMEWORK_SIGNATURE', None)
 # SSO Tokens HAVE to have a user attribute and a token attribute on them
 DEFAULTS = {
     'AUTH_TOKEN_EXPIRATION': 168,  # hours
-    'COGNITO_ENABLED': False,
-    'COGNITO_REGION': None,
-    'COGNITO_USER_POOL': None,
     'RESET_PASSWORD_TOKEN_EXPIRATION': 1,  # hours
     'FAILED_LOGIN_FREEZE_TIME': 20, # minutes
     'FAILED_LOGIN_RETRY_ATTEMPTS': 20,
@@ -96,8 +93,6 @@ class AuthSettings(object):
         return getattr(module, name[dot + 1:])
 
     def get_auth_token_document(self):
-        if 'COGNITO_ENABLED' in self.user_settings.keys() and self.user_settings['COGNITO_ENABLED'] is True:
-            return None
         try:
             name = self.user_settings['AUTH_TOKEN_DOCUMENT']
         except KeyError:
@@ -161,15 +156,8 @@ class AuthSettings(object):
                 raise InvalidAuthSettings(self.ErrorMessages.NOT_PROVIDED.format(required_setting))
 
         # ensure we have all the models we need
-        if 'AUTH_TOKEN_DOCUMENT' not in self.user_settings.keys() and ('COGNITO_ENABLED' not in self.user_settings.keys() or self.user_settings['COGNITO_ENABLED'] is False):
+        if 'AUTH_TOKEN_DOCUMENT' not in self.user_settings.keys():
             raise InvalidAuthSettings(self.ErrorMessages.NOT_PROVIDED.format('AUTH_TOKEN_DOCUMENT'))
-
-        if 'DB_SETTINGS' in self.user_settings.keys() and self.user_settings['DB_SETTINGS']:
-            # need to setup connection to mongo if db_engine is mongo
-            db_engine = self.user_settings['DATABASE_ENGINE']
-            if db_engine == 'mongo':
-                from mongoengine import connect
-                connect(self.user_settings['DB_SETTINGS']['db'], **self.user_settings['DB_SETTINGS']['kwargs'])
 
         # todo: validate user model fields
 

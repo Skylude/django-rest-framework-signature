@@ -6,7 +6,6 @@ import os
 import bcrypt
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
-from mongoengine.errors import DoesNotExist
 from rest_framework_signature.helpers import check_valid_reset_token
 from rest_framework_signature.serializers import AuthTokenSerializer, SSOTokenSerializer
 from rest_framework_signature.settings import auth_settings
@@ -25,13 +24,10 @@ class DeleteAuthToken(APIView):
 
         try:
             token = auth_token_model.objects.get(user=request.user, key=auth[1].decode('utf-8'))
-        except (DoesNotExist, ObjectDoesNotExist):
+        except ObjectDoesNotExist:
             return Response(status=status.HTTP_400_BAD_REQUEST)
         token.delete()
 
-        if auth_settings.DATABASE_ENGINE == 'mongo':
-            # have to cascade_save to ensure parent documents are deleted -- due to inheritance in mongoengine
-            token.cascade_save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -71,7 +67,7 @@ class GetAuthToken(ObtainAuthToken):
                 if user.failed_login_attempts >= auth_settings.FAILED_LOGIN_RETRY_ATTEMPTS:
                     response = {'error_message': ErrorMessages.TOO_MANY_INCORRECT_LOGIN_ATTEMPTS}
                     return Response(response, content_type='application/json', status=status.HTTP_400_BAD_REQUEST)
-            except (DoesNotExist, ObjectDoesNotExist):
+            except ObjectDoesNotExist:
                 pass
         response = {'error_message': serializer.friendly_error_message}
         return Response(response, content_type='application/json', status=status.HTTP_400_BAD_REQUEST)
@@ -117,7 +113,7 @@ class ResetPassword(APIView):
 
         try:
             user = self.user_model.objects.get(username=username)
-        except (DoesNotExist, ObjectDoesNotExist):
+        except ObjectDoesNotExist:
             response = {'error_message': ErrorMessages.INVALID_USERNAME}
             return Response(response, content_type='application/json', status=status.HTTP_400_BAD_REQUEST)
 
@@ -145,7 +141,7 @@ class CheckPasswordResetLink(APIView):
 
         try:
             user = self.user_model.objects.get(password_reset_token=reset_token)
-        except (DoesNotExist, ObjectDoesNotExist):
+        except ObjectDoesNotExist:
             response = {'error_message': ErrorMessages.INVALID_RESET_PASSWORD_TOKEN}
             return Response(response, content_type='application/json', status=status.HTTP_400_BAD_REQUEST)
 
@@ -171,7 +167,7 @@ class SubmitNewPassword(APIView):
 
         try:
             user = self.user_model.objects.get(password_reset_token=reset_token)
-        except (DoesNotExist, ObjectDoesNotExist):
+        except ObjectDoesNotExist:
             response = {'error_message': ErrorMessages.INVALID_RESET_PASSWORD_TOKEN}
             return Response(response, content_type='application/json', status=status.HTTP_400_BAD_REQUEST)
 

@@ -6,8 +6,8 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: cimg/python:3.6.9
-      - image: cimg/postgres:9.6.24
+      - image: cimg/python:3.11.2
+      - image: cimg/postgres:12.8
         environment:
           POSTGRES_USER=test
 
@@ -51,17 +51,7 @@ jobs:
             mkdir xunit
             . venv/bin/activate
             cd test_projects/test_proj
-            python manage.py test --with-xunit --xunit-file=../../xunit/xunit-test_proj.xml
-            cd ../test_cognito_proj
-            python manage.py test --with-xunit --xunit-file=../../xunit/xunit-cognito_test_proj.xml
-
-      # store test results
-      - store_test_results:
-          path: ./xunit
-
-      # store xml test artifacts
-      - store_artifacts:
-          path: ./xunit
+            python manage.py test
 
       # deploy to pypi
       - deploy:
