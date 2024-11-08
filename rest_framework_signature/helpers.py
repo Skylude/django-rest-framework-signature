@@ -179,7 +179,7 @@ class RestFrameworkSignatureTestClass(TestCase):
         if not hasattr(self, '_api_client'):
             self.setup_client()
         return self._api_client
-    
+
     @property
     def user(self):
         if not hasattr(self, '_api_client'):
@@ -198,18 +198,14 @@ class RestFrameworkSignatureTestClass(TestCase):
             self.setup_client()
         return self._sha1_password
 
-    def setup_client(self, api_key=None):
-        # create client to access api endpoints
-        self._api_client = APIClient()
-
-        # create a user to use to authenticate against
+    def setup_user(self):
         username = generate_email_address()
         salt = bcrypt.gensalt()
         m = hashlib.sha1()
         m.update('pass1234'.encode('utf-8'))
-        sha1_password = m.hexdigest()
+        self._sha1_password = m.hexdigest()
         m = hashlib.sha1()
-        m.update(sha1_password.encode('utf-8'))
+        m.update(self._sha1_password.encode('utf-8'))
         m.update(salt)
         password = m.hexdigest()
         test_user = self.user_model(
@@ -218,9 +214,17 @@ class RestFrameworkSignatureTestClass(TestCase):
             salt=salt.decode('utf-8')
         )
         test_user.save()
+        return test_user
+
+    def setup_client(self, test_user=None, api_key=None):
+        # create client to access api endpoints
+        self._api_client = APIClient()
+
+        # create a user to use to authenticate against
+        if test_user is None:
+            test_user = self.setup_user()
         # create an authentication token
         token, created = self.auth_token_model.objects.get_or_create(user=test_user)
-        self._sha1_password = sha1_password
         self.token = token
 
         # create a signature DeviceToken to hash our requests
