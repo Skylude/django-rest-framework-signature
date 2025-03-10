@@ -11,11 +11,11 @@ from rest_framework_signature.serializers import AuthTokenSerializer, SSOTokenSe
 from rest_framework_signature.settings import auth_settings
 from rest_framework import status, authentication
 from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from rest_framework_signature.errors import ErrorMessages
+from rest_framework_signature.exceptions import SignatureException
 
 
 class DeleteAuthToken(APIView):
@@ -63,10 +63,10 @@ class GetAuthToken(ObtainAuthToken):
                 user.last_failed_login = timezone.now()
                 user.save()
                 if user.failed_login_attempts >= auth_settings.FAILED_LOGIN_RETRY_ATTEMPTS:
-                    raise APIException(ErrorMessages.TOO_MANY_INCORRECT_LOGIN_ATTEMPTS)
+                    raise SignatureException(ErrorMessages.TOO_MANY_INCORRECT_LOGIN_ATTEMPTS)
             except ObjectDoesNotExist:
                 pass
-        raise APIException(serializer.friendly_error_message)
+        raise SignatureException(serializer.friendly_error_message)
 
 
 class GetAuthTokenSSO(ObtainAuthToken):
@@ -93,7 +93,7 @@ class GetAuthTokenSSO(ObtainAuthToken):
             return Response(response, content_type='application/json', status=status.HTTP_200_OK)
 
         # todo: block them if too many sso attempts?
-        raise APIException(ErrorMessages.INVALID_CREDENTIALS)
+        raise SignatureException(ErrorMessages.INVALID_CREDENTIALS)
 
 
 class ResetPassword(APIView):
@@ -103,12 +103,12 @@ class ResetPassword(APIView):
 
         username = request.data.get('username', None)
         if not username:
-            raise APIException(ErrorMessages.MISSING_USERNAME)
+            raise SignatureException(ErrorMessages.MISSING_USERNAME)
 
         try:
             user = self.user_model.objects.get(username=username)
         except ObjectDoesNotExist:
-            raise APIException(ErrorMessages.INVALID_USERNAME)
+            raise SignatureException(ErrorMessages.INVALID_USERNAME)
 
         # create verification token
         user.password_reset_token = binascii.hexlify(os.urandom(22)).decode()
@@ -129,16 +129,16 @@ class CheckPasswordResetLink(APIView):
         reset_token = request.data.get('reset_token', None)
 
         if not reset_token:
-            raise APIException(ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
+            raise SignatureException(ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
 
         try:
             user = self.user_model.objects.get(password_reset_token=reset_token)
         except ObjectDoesNotExist:
-            raise APIException(ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
+            raise SignatureException(ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
 
         valid_reset_token = check_valid_reset_token(reset_token, user)
         if not valid_reset_token:
-            raise APIException(ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
+            raise SignatureException(ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
 
         response = {'success': True}
         return Response(response, status=status.HTTP_200_OK)
@@ -152,20 +152,20 @@ class SubmitNewPassword(APIView):
         reset_token = request.data.get('reset_token', None)
 
         if not reset_token:
-            raise APIException(ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
+            raise SignatureException(ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
 
         try:
             user = self.user_model.objects.get(password_reset_token=reset_token)
         except ObjectDoesNotExist:
-            raise APIException(ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
+            raise SignatureException(ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
 
         valid_reset_token = check_valid_reset_token(reset_token, user)
         if not valid_reset_token:
-            raise APIException(ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
+            raise SignatureException(ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
 
         password = request.data.get('password', None)
         if not password:
-            raise APIException(ErrorMessages.NO_PASSWORD)
+            raise SignatureException(ErrorMessages.NO_PASSWORD)
 
         m = hashlib.sha1()
         if user.salt is None:

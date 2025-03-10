@@ -226,7 +226,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         result = self.api_client.post(url, body, **headers)
 
         # assert
-        self.assertEquals(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEquals(result.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_sso_login_with_multiple_token_classes_fails(self):
         # arrange
@@ -238,7 +238,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         result = self.api_client.post(url, body, **headers)
 
         # assert
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
 
     @patch('rest_framework_signature.settings.auth_settings.get_sso_token_classes')
     def test_sso_login_fails_with_no_(self, mock_sso_classes):
@@ -253,7 +253,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         result = self.api_client.post(url, body, **headers)
 
         # assert
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
 
     @patch('test_projects.test_proj.test_app.views.UserHandler.get')
     def test_add_api_key_id_to_request(self, mock_get):
@@ -338,7 +338,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         body = {'reset_token': self.user.password_reset_token}
         headers = self.get_headers_without_auth(url, body)
         result = self.api_client.post(url, body, format='json', **headers)
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(result.data['detail'], ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
 
     def test_post_check_reset_password_link_invalid_reset_token(self):
@@ -346,7 +346,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         body = {'reset_token': '12315sdf'}
         headers = self.get_headers_without_auth(url, body)
         result = self.api_client.post(url, body, format='json', **headers)
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(result.data['detail'], ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
 
     def test_post_check_reset_password_link_no_reset_token(self):
@@ -354,7 +354,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         body = {}
         headers = self.get_headers_without_auth(url, body)
         result = self.api_client.post(url, body, format='json', **headers)
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(result.data['detail'], ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
 
     def test_post_login(self):
@@ -408,7 +408,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         }
         for x in range(20):
             result = self.api_client.post(url, body, format='json')
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(result.data['detail'], ErrorMessages.TOO_MANY_INCORRECT_LOGIN_ATTEMPTS)
 
     def test_post_login_with_incorrect_password_updates_failed_login_attempts(self):
@@ -418,7 +418,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
             'password': 'wrong'
         }
         result = self.api_client.post(url, body, format='json')
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(result.data['detail'], ErrorMessages.INVALID_CREDENTIALS)
         user = self.user_model.objects.get(username=self.user.username)
         self.assertEqual(user.failed_login_attempts, 1)
@@ -430,7 +430,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
             'password': 'wrong'
         }
         result = self.api_client.post(url, body, format='json')
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(result.data['detail'], ErrorMessages.INVALID_CREDENTIALS)
         user = self.user_model.objects.get(username=self.user.username)
         self.assertIsNotNone(user.last_failed_login)
@@ -442,14 +442,14 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
             'password': self.sha1_password
         }
         result = self.api_client.post(url, body, format='json')
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(result.data['detail'], ErrorMessages.INVALID_CREDENTIALS)
 
     def test_post_login_with_no_username(self):
         url = '/auth/login'
         body = {}
         result = self.api_client.post(url, body, format='json')
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(result.data['detail'], ErrorMessages.MISSING_USERNAME_OR_PASSWORD)
 
     def test_post_logout(self):
@@ -463,7 +463,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         body = {'username': 'doesnotexist@test.com'}
         headers = self.get_headers_without_auth(url, body)
         result = self.api_client.post(url, body, format='json', **headers)
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(result.data['detail'], ErrorMessages.INVALID_USERNAME)
 
     def test_post_reset_password_no_username(self):
@@ -471,7 +471,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         body = {}
         headers = self.get_headers_without_auth(url, body)
         result = self.api_client.post(url, body, format='json', **headers)
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(result.data['detail'], ErrorMessages.MISSING_USERNAME)
 
     def test_post_reset_password_sets_reset_password_token(self):
@@ -489,7 +489,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         body = {}
         headers = self.get_headers_without_auth(url, body)
         result = self.api_client.post(url, body, format='json', **headers)
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(result.data['detail'], ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
 
     def test_post_submit_new_password_invalid_reset_token(self):
@@ -497,7 +497,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         body = {'reset_token': '12315sdf'}
         headers = self.get_headers_without_auth(url, body)
         result = self.api_client.post(url, body, format='json', **headers)
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(result.data['detail'], ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
 
     def test_post_submit_new_password_link_expired_token(self):
@@ -509,7 +509,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         body = {'reset_token': self.user.password_reset_token}
         headers = self.get_headers_without_auth(url, body)
         result = self.api_client.post(url, body, format='json', **headers)
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(result.data['detail'], ErrorMessages.INVALID_RESET_PASSWORD_TOKEN)
 
     def test_post_submit_new_password_link_no_password(self):
@@ -521,7 +521,7 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         body = {'reset_token': self.user.password_reset_token}
         headers = self.get_headers_without_auth(url, body)
         result = self.api_client.post(url, body, format='json', **headers)
-        self.assertEqual(result.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(result.data['detail'], ErrorMessages.NO_PASSWORD)
 
     def test_post_submit_new_password_link(self):
