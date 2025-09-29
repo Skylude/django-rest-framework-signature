@@ -1,7 +1,6 @@
 import re
 
 import rest_framework.authentication
-from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.encoding import uri_to_iri
 from rest_framework import exceptions
@@ -30,34 +29,33 @@ class TokenAuthentication(rest_framework.authentication.BaseAuthentication):
     unsecured_urls = auth_settings.UNSECURED_URLS
 
     def authenticate(self, request):
-
         # if it is an unsecured url then bypass auth
         request_path = request.path
         if (request.method, request_path) in self.unsecured_urls:
-            return
+            return None
 
         # first check if they are sending a super key to bypass all auth
         super_key_header = auth_settings.SUPER_KEY_HEADER
         super_key = request.META.get(super_key_header, None) if super_key_header else None
         if super_key and auth_settings.SUPER_KEY_AUTH and super_key == auth_settings.SUPER_KEY_AUTH:
-            return AnonymousUser, None
+            return None
 
         # first thing check the signature of the request
         api_key = self.check_signature(request)
 
         # special case for posting new users
         if (request.method, request_path) in self.bypass_auth_urls:
-            return
+            return None
 
         # if they've disabled user auth simply return an anonymous user
         if auth_settings.DISABLE_USER_AUTH:
-            return AnonymousUser, None
+            return None
 
         # if specific API keys do not need user auth then bypass it
         bypass_user_auth_setting = auth_settings.BYPASS_USER_AUTH_API_KEY_NAMES and api_key.name in auth_settings.BYPASS_USER_AUTH_API_KEY_NAMES
         bypass_user_auth_api_key = hasattr(api_key, 'bypass_user_auth') and getattr(api_key, 'bypass_user_auth', False)
         if bypass_user_auth_setting or bypass_user_auth_api_key:
-            return AnonymousUser, None
+            return None
 
         # regular authentication
         auth_header = rest_framework.authentication.get_authorization_header(request)
