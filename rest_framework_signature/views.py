@@ -38,22 +38,29 @@ class GetAuthToken(ObtainAuthToken):
     serializer_class = AuthTokenSerializer
 
     def post(self, request):
-
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            user = serializer.validated_data['user']
-            token, created = self.model.objects.get_or_create(user=user, auth_type='password')
-            if not created:
-                token.updated = timezone.now()
-                token.save()
-
-            user.failed_login_attempts = 0
-            user.save()
-            response = {'token': token.key, 'userId': serializer.validated_data['user'].id}
+            response = self.create_success_response(serializer)
             return Response(response, content_type='application/json', status=status.HTTP_200_OK)
 
-        # increase incorrect login attempts
         username = request.data.get('username', None)
+        self.increase_incorrect_login_attempts(username)
+        raise SignatureException(serializer.friendly_error_message)
+
+    def create_success_response(self, serializer):
+        user = serializer.validated_data['user']
+        token, created = self.model.objects.get_or_create(user=user, auth_type='password')
+        if not created:
+            token.updated = timezone.now()
+            token.save()
+        user.failed_login_attempts = 0
+        user.save()
+        return {
+            'token': token.key,
+            'userId': serializer.validated_data['user'].id
+        }
+
+    def increase_incorrect_login_attempts(self, username):
         if username:
             try:
                 user = self.user_model.objects.get(username=username)
@@ -66,7 +73,6 @@ class GetAuthToken(ObtainAuthToken):
                     raise SignatureException(ErrorMessages.TOO_MANY_INCORRECT_LOGIN_ATTEMPTS)
             except ObjectDoesNotExist:
                 pass
-        raise SignatureException(serializer.friendly_error_message)
 
 
 class GetAuthTokenSSO(ObtainAuthToken):
@@ -78,22 +84,26 @@ class GetAuthTokenSSO(ObtainAuthToken):
     serializer_class = SSOTokenSerializer
 
     def post(self, request):
-
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            user = serializer.validated_data['user']
-            token, created = self.model.objects.get_or_create(user=user, auth_type='sso')
-            if not created:
-                token.updated = timezone.now()
-                token.save()
-
-            user.failed_login_attempts = 0
-            user.save()
-            response = {'token': token.key, 'userId': serializer.validated_data['user'].id}
+            response = self.create_success_response(serializer)
             return Response(response, content_type='application/json', status=status.HTTP_200_OK)
 
         # todo: block them if too many sso attempts?
         raise SignatureException(ErrorMessages.INVALID_CREDENTIALS)
+
+    def create_success_response(self, serializer):
+        user = serializer.validated_data['user']
+        token, created = self.model.objects.get_or_create(user=user, auth_type='sso')
+        if not created:
+            token.updated = timezone.now()
+            token.save()
+        user.failed_login_attempts = 0
+        user.save()
+        return {
+            'token': token.key,
+            'userId': serializer.validated_data['user'].id
+        }
 
 
 class ResetPassword(APIView):
