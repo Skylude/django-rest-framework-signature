@@ -58,9 +58,9 @@ jobs:
           name: PyPi Deploy
           # upgrade pip to successfully install cryptography package
           command: |
-            if [ "${CIRCLE_BRANCH}" == "name_of_dist_pep_625" ]; then
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
               pip install --upgrade pip setuptools
               pip install twine
               python setup.py sdist
-              ls -alh dist/
+              twine upload --username __token__ --password "${PYPI_API_TOKEN}" dist/*
             fi
