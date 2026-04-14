@@ -185,6 +185,7 @@ class SubmitNewPassword(APIView):
         user.password = m.hexdigest()
         user.password_reset_ip = request.META.get('REMOTE_ADDR', None)
         user.password_reset_token = None
+        user.failed_login_attempts = 0
         user.save()
 
         response = {'success': True}
