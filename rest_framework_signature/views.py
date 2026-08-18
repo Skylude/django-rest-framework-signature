@@ -69,6 +69,8 @@ class GetAuthToken(ObtainAuthToken):
                 user.failed_login_attempts += 1
                 user.last_failed_login = timezone.now()
                 user.save()
+                if user.failed_login_attempts >= auth_settings.FAILED_LOGIN_RETRY_ATTEMPTS:
+                    raise SignatureException(ErrorMessages.TOO_MANY_INCORRECT_LOGIN_ATTEMPTS)
             except ObjectDoesNotExist:
                 pass
 
