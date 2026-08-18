@@ -206,3 +206,4 @@ obtain_auth_token_sso = GetAuthTokenSSO.as_view()
 reset_password = ResetPassword.as_view()
 submit_new_password = SubmitNewPassword.as_view()
 ping = Ping.as_view()
+
