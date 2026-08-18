@@ -409,7 +409,12 @@ class AuthenticationTests(RestFrameworkSignatureTestClass):
         for x in range(20):
             result = self.api_client.post(url, body, format='json')
         self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(result.data['detail'], ErrorMessages.TOO_MANY_INCORRECT_LOGIN_ATTEMPTS)
+        self.assertEqual(result.data['detail'], ErrorMessages.INVALID_CREDENTIALS)
+
+        body['password'] = self.sha1_password
+        result = self.api_client.post(url, body, format='json')
+        self.assertEqual(result.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(result.data['detail'], ErrorMessages.INVALID_CREDENTIALS)
 
     def test_post_login_with_incorrect_password_updates_failed_login_attempts(self):
         url = '/auth/login'

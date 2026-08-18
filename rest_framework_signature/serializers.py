@@ -29,13 +29,14 @@ class AuthTokenSerializer(serializers.Serializer):
 
             if user:
                 if not user.is_active:
-                    self.friendly_error_message = ErrorMessages.ACCOUNT_DISABLED
+                    self.friendly_error_message = ErrorMessages.INVALID_CREDENTIALS
                     raise exceptions.ValidationError(self.friendly_error_message)
 
                 if user.last_failed_login:
                     login_freeze = user.last_failed_login + timedelta(minutes=auth_settings.FAILED_LOGIN_FREEZE_TIME)
-                    if user.failed_login_attempts >= 5 and timezone.now() < login_freeze:
-                        self.friendly_error_message = ErrorMessages.TOO_MANY_INCORRECT_LOGIN_ATTEMPTS
+                    if user.failed_login_attempts >= auth_settings.FAILED_LOGIN_RETRY_ATTEMPTS \
+                            and timezone.now() < login_freeze:
+                        self.friendly_error_message = ErrorMessages.INVALID_CREDENTIALS
                         raise exceptions.ValidationError(self.friendly_error_message)
 
                 user.failed_login_attempts = 0
