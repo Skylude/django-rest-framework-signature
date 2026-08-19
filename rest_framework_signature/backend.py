@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -8,22 +9,24 @@ from rest_framework_signature.settings import auth_settings
 class MSSQLBackend(object):
     supports_inactive_user = False
     user_model = auth_settings.get_user_document()
+    DUMMY_SALT = 'signature-login-dummy-salt'
+    DUMMY_PASSWORD_HASH = '0' * 40
 
     def authenticate(self, request=None, username=None, password=None):
         user = self.get_user_by_username(username)
-        if not user:
-            return None
+        # Missing users follow the same hash-and-compare path as real users.
+        salt = user.salt if user and user.salt else self.DUMMY_SALT
+        expected_hash = user.password if user else self.DUMMY_PASSWORD_HASH
         m = hashlib.sha1()
         m.update(password.encode('utf-8'))
-        if type(user.salt) is bytes:
-            m.update(user.salt)
+        if type(salt) is bytes:
+            m.update(salt)
         else:
-            m.update(user.salt.encode('utf-8'))
+            m.update(salt.encode('utf-8'))
         hashed_password = m.hexdigest()
-        if user.password == hashed_password:
+        if user and hmac.compare_digest(expected_hash or '', hashed_password):
             return user
-        else:
-            return None
+        return None
 
     def get_user_by_username(self, username):
         try:
